@@ -1,0 +1,15 @@
+version: 1
+updated: 2026-05-22T11:50:17.158Z
+
+files:
+  "middleware.ts":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T11:50:17.158Z
+    change_count: 1
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T11:50:17.158Z
+        action: write
+        source: "claude:junghyunhao"

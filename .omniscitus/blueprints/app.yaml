@@ -1,0 +1,231 @@
+version: 1
+updated: 2026-05-22T14:34:51.330Z
+
+files:
+  "app/globals.css":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T09:38:53.643Z
+    change_count: 1
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T09:38:53.643Z
+        action: edit
+        source: "claude:junghyunhao"
+  "app/layout.tsx":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T09:39:07.309Z
+    change_count: 1
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T09:39:07.309Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/api/generate/route.ts":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T14:18:57.566Z
+    change_count: 18
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T14:18:57.566Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:56:03.112Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:55:44.707Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:55:31.510Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:55:26.194Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:48:45.485Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:38:32.888Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:38:21.011Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:38:13.033Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:00:46.972Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T12:38:54.120Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T12:38:48.585Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T12:29:18.308Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T12:22:07.539Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T11:50:43.449Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T09:55:44.970Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T09:51:43.446Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T09:39:29.480Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/page.tsx":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T13:22:40.095Z
+    change_count: 5
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T13:22:40.095Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:06:44.726Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T12:21:15.471Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T11:51:27.684Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T09:40:31.259Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/auth/callback/route.ts":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T11:50:50.737Z
+    change_count: 1
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T11:50:50.737Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/login/page.tsx":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T11:50:58.341Z
+    change_count: 1
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T11:50:58.341Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/api/babies/route.ts":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T12:19:40.248Z
+    change_count: 1
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T12:19:40.248Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/api/babies/[id]/route.ts":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T12:20:12.071Z
+    change_count: 1
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T12:20:12.071Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/profile/page.tsx":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T13:06:54.460Z
+    change_count: 3
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T13:06:54.460Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:01:32.346Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T12:20:41.462Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/history/page.tsx":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T13:07:00.838Z
+    change_count: 3
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T13:07:00.838Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:01:36.314Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T12:29:33.122Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/api/recipe/route.ts":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T14:34:10.504Z
+    change_count: 4
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T14:34:10.504Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T14:18:51.449Z
+        action: edit
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T13:00:56.986Z
+        action: write
+        source: "claude:junghyunhao"
+      - date: 2026-05-22T12:47:58.337Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/api/recipes/route.ts":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T14:34:17.270Z
+    change_count: 1
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T14:34:17.270Z
+        action: write
+        source: "claude:junghyunhao"
+  "app/recipes/page.tsx":
+    status: active
+    source: "claude:junghyunhao"
+    created: 2026-05-22
+    last_modified: 2026-05-22T14:34:51.330Z
+    change_count: 1
+    purpose: ""
+    change_log:
+      - date: 2026-05-22T14:34:51.330Z
+        action: write
+        source: "claude:junghyunhao"
