@@ -17,7 +17,7 @@ export function UserMenu({ email }: { email: string }) {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center justify-center flex-wrap gap-2">
       <Link href="/history">
         <Button variant="outline" size="sm" className="rounded-full text-xs border-border">
           {t.history}

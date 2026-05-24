@@ -8,7 +8,7 @@ export const translations = {
 
     // Pages
     appName: "Little Spoonfuls 🥣",
-    appTagline: "Nutritionist-approved meals, crafted with love for your little one ✨",
+    appTagline: "Meals curated by infant nutrition experts, crafted with love for your little one ✨",
     babyProfiles: "Baby Profiles",
     mealHistory: "Meal History",
 
@@ -22,8 +22,14 @@ export const translations = {
       western: "Western 🇺🇸",
       chinese: "Chinese 🇨🇳",
     },
+    feedingApproach: "Feeding Approach",
+    blwTypes: {
+      "no-blw": "Traditional (Spoon-fed) 🥄",
+      blw: "Baby-Led Weaning (BLW) 👐",
+      mix: "Mixed (BLW + Spoon) 🥄👐",
+    },
     generateBtn: "What should baby eat today? 🥣",
-    loadingBtn: "Finding the perfect bites... ✨",
+    loadingBtn: "Selecting from expert-curated recipes... ✨",
     limitBtn: "See you tomorrow! 🌙",
     remaining: (n: number, _total: number) => `${n} more ${n === 1 ? "suggestion" : "suggestions"} left today`,
     limitReached: "That's all for today — come back tomorrow for fresh ideas!",
@@ -121,7 +127,7 @@ export const translations = {
 
     // Pages
     appName: "Little Spoonfuls 🥣",
-    appTagline: "오늘 우리 아기 뭐 먹이지? AI가 영양 만점 이유식을 추천해드려요 💛",
+    appTagline: "세계 유아식 전문가 자료를 바탕으로 선별한 오늘의 이유식 메뉴 💛",
     babyProfiles: "아기 프로필",
     mealHistory: "식사 기록",
 
@@ -135,8 +141,14 @@ export const translations = {
       western: "양식 🇺🇸",
       chinese: "중식 🇨🇳",
     },
+    feedingApproach: "수유 방식",
+    blwTypes: {
+      "no-blw": "일반 이유식 (숟가락) 🥄",
+      blw: "자기주도이유식 (BLW) 👐",
+      mix: "혼합 방식 🥄👐",
+    },
     generateBtn: "오늘 이유식 뭐먹이지? 🥣",
-    loadingBtn: "AI가 메뉴를 고르는 중이에요... ✨",
+    loadingBtn: "전문가 레시피에서 딱 맞는 메뉴를 고르는 중이에요... ✨",
     limitBtn: "내일 또 만나요! 🌙",
     remaining: (n: number, _total: number) => `오늘 ${n}번 더 추천받을 수 있어요`,
     limitReached: "오늘 추천은 모두 사용했어요 — 내일 새 메뉴로 만나요!",

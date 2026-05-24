@@ -16,6 +16,7 @@ import { useLanguage, useLang } from "@/components/LanguageProvider";
 import { getWeaningStage } from "@/lib/weaning-context";
 import type { MealPlan } from "@/app/api/generate/route";
 import type { Baby } from "@/app/api/babies/route";
+import type { BlwType } from "@/lib/blw-context";
 
 const DAILY_LIMIT = 3;
 
@@ -30,6 +31,7 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
   const lang = useLang();
   const [selectedBabyId, setSelectedBabyId] = useState(babies[0].id);
   const [cuisine, setCuisine] = useState("mix");
+  const [blwType, setBlwType] = useState<BlwType>("no-blw");
   const [mealPlan, setMealPlan] = useState<MealPlanWithMeta | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -50,7 +52,7 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
     const res = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baby_id: selectedBabyId, cuisine }),
+      body: JSON.stringify({ baby_id: selectedBabyId, cuisine, blw_type: blwType }),
     });
 
     const data = await res.json();
@@ -130,6 +132,22 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
               <SelectItem value="korean">{t.cuisines.korean}</SelectItem>
               <SelectItem value="western">{t.cuisines.western}</SelectItem>
               <SelectItem value="chinese">{t.cuisines.chinese}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label className="text-[11px] font-black text-muted-foreground uppercase tracking-wider">
+            {t.feedingApproach}
+          </label>
+          <Select value={blwType} onValueChange={(v) => v && setBlwType(v as BlwType)}>
+            <SelectTrigger className="rounded-2xl bg-white border-border">
+              <SelectValue>{t.blwTypes[blwType as keyof typeof t.blwTypes]}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="no-blw">{t.blwTypes["no-blw"]}</SelectItem>
+              <SelectItem value="blw">{t.blwTypes.blw}</SelectItem>
+              <SelectItem value="mix">{t.blwTypes.mix}</SelectItem>
             </SelectContent>
           </Select>
         </div>

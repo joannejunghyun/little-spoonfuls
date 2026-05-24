@@ -26,7 +26,7 @@ export default async function Home() {
     <LanguageProvider lang={lang}>
       <main className="flex flex-col items-center px-5 py-8 pb-16">
         <div className="w-full max-w-md">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col items-center gap-3 mb-6">
             <div className="inline-block bg-white rounded-full px-5 py-2.5 shadow-md shadow-primary/10">
               <h1 className="text-xl font-bold text-primary">{t.appName}</h1>
             </div>

@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWeaningStage, buildStageContext } from "@/lib/weaning-context";
+import { buildBlwContext, type BlwType } from "@/lib/blw-context";
 
 const client = new Anthropic();
 const DAILY_LIMIT = 3;
@@ -61,7 +62,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { baby_id, cuisine } = await req.json();
+  const { baby_id, cuisine, blw_type } = await req.json();
+  const blwType: BlwType = ["blw", "no-blw", "mix"].includes(blw_type) ? blw_type : "no-blw";
   const language: "en" | "ko" = user.user_metadata?.language ?? "en";
 
   const [{ data: baby, error: babyError }, { data: todayHistory }] = await Promise.all([
@@ -112,6 +114,7 @@ export async function POST(req: NextRequest) {
     }`;
 
   const stageContext = buildStageContext(weaningStage, cuisine);
+  const blwContext = buildBlwContext(blwType, weaningStage.id, language);
 
   const systemPrompt = `You are a certified baby nutritionist specializing in infant weaning (이유식). You respond ONLY with valid JSON — no markdown fences, no preamble, no explanation. Your response must start with { and end with }. Never truncate — output the complete JSON.
 IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breast milk or formula" / "모유 또는 분유" — not all parents breastfeed.`;
@@ -125,11 +128,13 @@ IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breas
 
 ${stageContext}
 
+${blwContext}
+
 MANDATORY NUTRITION RULES (follow strictly):
 1. At least one meal (lunch or dinner) MUST feature a combination of 3 or more distinct vegetables or produce items.
 2. Vary the vegetables across all four meals — do not repeat the same vegetable in more than one meal.
 3. Prioritize whole, nutrient-dense, colorful produce appropriate for the baby's stage and texture.
-4. ${weaningStage.fingerFoodsOk ? "INCLUDE at least one finger food option per day (snack is a good fit)." : "Do NOT include finger foods — this stage requires fully puréed or mashed textures only."}
+4. ${blwType === "blw" ? "ALL meals must be BLW finger-food format — no spoon-fed purées. See feeding approach section above." : blwType === "mix" ? "At least 2 of 4 meals must have a BLW finger food component. Snack must always be a BLW-style finger food." : weaningStage.fingerFoodsOk ? "INCLUDE at least one finger food option per day (snack is a good fit)." : "Do NOT include finger foods — this stage requires fully puréed or mashed textures only."}
 
 Generate a complete, safe, and nutritious day's meal plan with 4 meals appropriate for this exact stage.
 Write the ENTIRE meal plan in BOTH English (meals_en) AND Korean (meals_ko).

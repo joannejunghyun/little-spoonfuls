@@ -118,12 +118,8 @@ export function buildStageContext(stage: WeaningStage, cuisine: string): string 
     lines.push(`- Korean cooking method: ${stage.cookingRatioKo} / ${stage.chunkSizeKo}`);
     lines.push(`- Authentic Korean examples for this stage: ${stage.koreanExamples.join(", ")}`);
     if (stage.fingerFoodsOk && stage.koreanFingerFoods) {
-      lines.push(`- Finger foods (권장): ${stage.koreanFingerFoods.join(", ")} — include at least one finger food per day`);
+      lines.push(`- Korean finger foods (권장): ${stage.koreanFingerFoods.join(", ")}`);
     }
-  }
-
-  if (!stage.fingerFoodsOk) {
-    lines.push("- Finger foods: NOT appropriate at this stage — purée or mash only.");
   }
 
   return lines.join("\n");
