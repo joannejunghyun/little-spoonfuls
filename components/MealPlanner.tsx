@@ -247,6 +247,15 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
               ✨ {mealPlan.stage}
             </Badge>
           </div>
+
+          {mealPlan.overall_advice && (
+            <div className="bg-[#f0fdf4] rounded-3xl p-4 border border-[#bbf7d0]">
+              <p className="text-[11px] font-black text-emerald-600 uppercase tracking-wider mb-2">
+                💡 {t.overallAdvice}
+              </p>
+              <p className="text-sm text-foreground leading-relaxed">{mealPlan.overall_advice}</p>
+            </div>
+          )}
           <MealCard type={t.breakfast} meal={mealPlan.meals.breakfast} stage={mealPlan.stage} />
           <MealCard type={t.lunch} meal={mealPlan.meals.lunch} stage={mealPlan.stage} />
           <MealCard type={t.snack} meal={mealPlan.meals.snack} stage={mealPlan.stage} />

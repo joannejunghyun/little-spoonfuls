@@ -62,6 +62,7 @@ export const translations = {
     saveRecipe: "Save to Recipe Book",
     recipeSavedBtn: "Saved ❤️",
     expertAdvice: "Expert Advice",
+    overallAdvice: "Today's Expert Advice",
 
     // Recipe Book
     recipeBook: "Recipe Book",
@@ -195,6 +196,7 @@ export const translations = {
     saveRecipe: "레시피북에 저장하기",
     recipeSavedBtn: "저장됨 ❤️",
     expertAdvice: "전문가의 조언",
+    overallAdvice: "오늘의 전문가 조언",
 
     // Recipe Book
     recipeBook: "레시피북",

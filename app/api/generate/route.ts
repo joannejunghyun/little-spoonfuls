@@ -10,6 +10,7 @@ const DAILY_LIMIT = 3;
 export interface MealPlan {
   stage: string;
   cuisine: string;
+  overall_advice?: string;
   meals: {
     breakfast: Meal;
     lunch: Meal;
@@ -37,6 +38,8 @@ type MealSet = MealPlan["meals"];
 interface BilingualPlan {
   stage: string;
   cuisine: string;
+  overall_advice_en?: string;
+  overall_advice_ko?: string;
   meals_en: MealSet;
   meals_ko: MealSet;
 }
@@ -139,6 +142,8 @@ Adapt every meal to directly address this concern. Guidance:
 - Calcium → yogurt, cheese, broccoli, tofu
 - Specific ingredient mentioned → build at least one meal around that ingredient
 
+OVERALL ADVICE REQUIREMENT: Fill overall_advice_en and overall_advice_ko with 2–4 sentences summarising the big-picture nutritional strategy for the whole day in response to the parent's concern. Explain which nutrients/foods you prioritised across the day and why. Warm, reassuring tone — like a trusted nutritionist friend, not a textbook.
+
 EXPERT NOTE REQUIREMENT: For each meal, fill expert_note with 1–2 sentences in the same language as the meal (English for meals_en, Korean for meals_ko). Explain specifically WHY this meal helps with the parent's stated concern — name the key ingredient(s) and their benefit. Be warm and reassuring, not clinical.`
     : "";
 
@@ -169,7 +174,9 @@ Write the ENTIRE meal plan in BOTH English (meals_en) AND Korean (meals_ko).
 Return this exact JSON structure, fully filled in:
 {
   "stage": "${weaningStage.nameEn}",
-  "cuisine": "${cuisineLabel}",
+  "cuisine": "${cuisineLabel}",${parentRequest ? `
+  "overall_advice_en": "",
+  "overall_advice_ko": "",` : ""}
   "meals_en": ${mealTemplate},
   "meals_ko": ${mealTemplate}
 }`;
@@ -215,10 +222,14 @@ Return this exact JSON structure, fully filled in:
   ]);
 
   const meals = language === "ko" ? bilingual.meals_ko : bilingual.meals_en;
+  const overall_advice = language === "ko"
+    ? bilingual.overall_advice_ko
+    : bilingual.overall_advice_en;
 
   return NextResponse.json({
     stage: bilingual.stage,
     cuisine: bilingual.cuisine,
+    ...(overall_advice ? { overall_advice } : {}),
     meals,
     remaining: isAdmin ? null : DAILY_LIMIT - (count ?? 0) - 1,
   });
