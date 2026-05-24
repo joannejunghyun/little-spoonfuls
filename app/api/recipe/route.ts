@@ -74,11 +74,5 @@ Return this exact JSON structure, fully filled in:
     return NextResponse.json({ error: "Failed to parse recipe." }, { status: 500 });
   }
 
-  const ingredientNames = recipe.ingredients.map((i) => i.item);
-  supabase.from("saved_recipes").upsert(
-    { user_id: user.id, meal_name, stage, recipe, ingredient_names: ingredientNames },
-    { onConflict: "user_id,meal_name" },
-  );
-
   return NextResponse.json(recipe);
 }

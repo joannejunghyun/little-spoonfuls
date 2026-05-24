@@ -48,13 +48,15 @@ export const translations = {
     howToMake: "How to Make",
     parentTip: "Parent Tip 💡",
     gettingRecipe: "Cooking up the recipe... 🍳",
+    saveRecipe: "Save to Recipe Book",
+    recipeSavedBtn: "Saved ❤️",
 
     // Recipe Book
     recipeBook: "Recipe Book",
     recipeBookTitle: "My Recipe Book",
     allIngredients: "All",
     noRecipesYet: "No recipes saved yet",
-    noRecipesDesc: "View a recipe from any meal card — it'll be saved here automatically 📖",
+    noRecipesDesc: "Tap any meal card, view the recipe, then hit ❤️ to save it here 📖",
     recipeSavedCount: (n: number) => `${n} recipe${n === 1 ? "" : "s"} saved`,
 
     // History
@@ -167,13 +169,15 @@ export const translations = {
     howToMake: "만드는 방법",
     parentTip: "이런 점도 알아두세요 💡",
     gettingRecipe: "레시피를 불러오는 중이에요... 🍳",
+    saveRecipe: "레시피북에 저장하기",
+    recipeSavedBtn: "저장됨 ❤️",
 
     // Recipe Book
     recipeBook: "레시피북",
     recipeBookTitle: "나만의 레시피북",
     allIngredients: "전체",
     noRecipesYet: "저장된 레시피가 없어요",
-    noRecipesDesc: "메뉴 카드에서 레시피를 조회하면 자동으로 여기 저장돼요 📖",
+    noRecipesDesc: "메뉴 카드를 탭해서 레시피를 보고, ❤️ 를 눌러 저장하세요 📖",
     recipeSavedCount: (n: number) => `레시피 ${n}개 저장됨`,
 
     // History

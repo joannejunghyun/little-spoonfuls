@@ -8,6 +8,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Heart } from "lucide-react";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { Meal } from "@/app/api/generate/route";
 import type { DetailedRecipe } from "@/app/api/recipe/route";
@@ -25,11 +27,14 @@ export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeShee
   const [recipe, setRecipe] = useState<DetailedRecipe | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open || recipe) return;
     setLoading(true);
     setError("");
+    setSaved(false);
 
     fetch("/api/recipe", {
       method: "POST",
@@ -44,6 +49,18 @@ export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeShee
       .finally(() => setLoading(false));
   }, [open]);
 
+  async function handleSave() {
+    if (!recipe || saved || saving) return;
+    setSaving(true);
+    await fetch("/api/recipes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ meal_name: meal.name, stage, recipe }),
+    });
+    setSaved(true);
+    setSaving(false);
+  }
+
   return (
     <Sheet open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
       <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto px-5 pb-8">
@@ -51,9 +68,24 @@ export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeShee
           <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
             {mealType}
           </p>
-          <SheetTitle className="text-xl font-bold text-foreground leading-snug">
-            {meal.name}
-          </SheetTitle>
+          <div className="flex items-start justify-between gap-3">
+            <SheetTitle className="text-xl font-bold text-foreground leading-snug">
+              {meal.name}
+            </SheetTitle>
+            {recipe && (
+              <button
+                onClick={handleSave}
+                disabled={saved || saving}
+                className="shrink-0 mt-0.5 transition-transform active:scale-90"
+                aria-label={saved ? t.recipeSavedBtn : t.saveRecipe}
+              >
+                <Heart
+                  size={24}
+                  className={saved ? "fill-primary text-primary" : "text-muted-foreground hover:text-primary transition-colors"}
+                />
+              </button>
+            )}
+          </div>
           <p className="text-xs text-primary font-medium">{meal.nutrition}</p>
         </SheetHeader>
 
@@ -113,6 +145,19 @@ export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeShee
               </p>
               <p className="text-sm text-foreground leading-relaxed">{recipe.tips}</p>
             </div>
+
+            <Button
+              onClick={handleSave}
+              disabled={saved || saving}
+              className={`w-full rounded-2xl py-5 font-bold text-base transition-all ${
+                saved
+                  ? "bg-primary/10 text-primary border border-primary/20 shadow-none"
+                  : "bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary/90 active:scale-95"
+              }`}
+            >
+              <Heart size={16} className={`mr-2 ${saved ? "fill-primary" : ""}`} />
+              {saved ? t.recipeSavedBtn : t.saveRecipe}
+            </Button>
           </div>
         )}
       </SheetContent>
