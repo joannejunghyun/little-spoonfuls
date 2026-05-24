@@ -23,6 +23,11 @@ export interface Meal {
   ingredients: string[];
   prep: string;
   nutrition: string;
+  // Embedded recipe — populated at generation time to avoid a second API call
+  steps?: string[];
+  total_time?: string;
+  servings?: string;
+  tips?: string;
 }
 
 type MealSet = MealPlan["meals"];
@@ -107,17 +112,18 @@ export async function POST(req: NextRequest) {
     : "";
 
   const mealTemplate = `{
-      "breakfast": { "name": "", "ingredients": [], "prep": "", "nutrition": "" },
-      "lunch": { "name": "", "ingredients": [], "prep": "", "nutrition": "" },
-      "snack": { "name": "", "ingredients": [], "prep": "", "nutrition": "" },
-      "dinner": { "name": "", "ingredients": [], "prep": "", "nutrition": "" }
+      "breakfast": { "name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "" },
+      "lunch":     { "name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "" },
+      "snack":     { "name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "" },
+      "dinner":    { "name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "" }
     }`;
 
   const stageContext = buildStageContext(weaningStage, cuisine);
   const blwContext = buildBlwContext(blwType, weaningStage.id, language);
 
   const systemPrompt = `You are a certified baby nutritionist specializing in infant weaning (이유식). You respond ONLY with valid JSON — no markdown fences, no preamble, no explanation. Your response must start with { and end with }. Never truncate — output the complete JSON.
-IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breast milk or formula" / "모유 또는 분유" — not all parents breastfeed.`;
+IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breast milk or formula" / "모유 또는 분유" — not all parents breastfeed.
+For each meal, include: total_time (e.g. "20 minutes"), servings (e.g. "1 serving ~120g"), 3–5 clear cooking steps in steps[], and one practical parent tip in tips.`;
 
   const prompt = `Baby details:
 - Name: ${baby.name}
@@ -151,7 +157,7 @@ Return this exact JSON structure, fully filled in:
   try {
     message = await client.messages.create({
       model: "claude-haiku-4-5-20251001",
-      max_tokens: 4096,
+      max_tokens: 8000,
       system: systemPrompt,
       messages: [{ role: "user", content: prompt }],
     });

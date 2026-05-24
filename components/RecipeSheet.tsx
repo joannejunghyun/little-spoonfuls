@@ -24,17 +24,38 @@ interface RecipeSheetProps {
 
 export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeSheetProps) {
   const t = useLanguage();
-  const [recipe, setRecipe] = useState<DetailedRecipe | null>(null);
+  const hasEmbedded = !!(meal.steps && meal.steps.length > 0);
+
+  const embeddedRecipe: DetailedRecipe | null = hasEmbedded
+    ? {
+        name: meal.name,
+        servings: meal.servings ?? "",
+        total_time: meal.total_time ?? "",
+        ingredients: meal.ingredients.map((item) => ({ item, amount: "" })),
+        steps: meal.steps!,
+        tips: meal.tips ?? "",
+      }
+    : null;
+
+  const [recipe, setRecipe] = useState<DetailedRecipe | null>(embeddedRecipe);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!open || recipe) return;
+    if (!open) {
+      setSaved(false);
+      return;
+    }
+    // Already have embedded recipe — no API call needed
+    if (hasEmbedded) {
+      setRecipe(embeddedRecipe);
+      return;
+    }
+    if (recipe) return;
     setLoading(true);
     setError("");
-    setSaved(false);
 
     fetch("/api/recipe", {
       method: "POST",
@@ -52,10 +73,13 @@ export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeShee
   async function handleSave() {
     if (!recipe || saved || saving) return;
     setSaving(true);
+    const recipeToSave: DetailedRecipe = hasEmbedded
+      ? { ...recipe, ingredients: meal.ingredients.map((item) => ({ item, amount: "" })) }
+      : recipe;
     await fetch("/api/recipes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ meal_name: meal.name, stage, recipe }),
+      body: JSON.stringify({ meal_name: meal.name, stage, recipe: recipeToSave }),
     });
     setSaved(true);
     setSaving(false);
@@ -117,7 +141,7 @@ export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeShee
                 {recipe.ingredients.map((ing, i) => (
                   <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                     <span className="text-sm text-foreground">{ing.item}</span>
-                    <span className="text-sm text-muted-foreground font-medium">{ing.amount}</span>
+                    {ing.amount && <span className="text-sm text-muted-foreground font-medium">{ing.amount}</span>}
                   </div>
                 ))}
               </div>
