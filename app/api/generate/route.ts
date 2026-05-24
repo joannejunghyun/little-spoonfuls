@@ -28,6 +28,8 @@ export interface Meal {
   total_time?: string;
   servings?: string;
   tips?: string;
+  // Populated only when a parent request was provided
+  expert_note?: string;
 }
 
 type MealSet = MealPlan["meals"];
@@ -112,26 +114,32 @@ export async function POST(req: NextRequest) {
     ? `\nALREADY SERVED TODAY — do NOT repeat any of these meals: ${usedMealNames.join(", ")}.`
     : "";
 
+  const mealFields = parentRequest
+    ? `"name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "", "expert_note": ""`
+    : `"name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": ""`;
+
   const mealTemplate = `{
-      "breakfast": { "name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "" },
-      "lunch":     { "name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "" },
-      "snack":     { "name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "" },
-      "dinner":    { "name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "" }
+      "breakfast": { ${mealFields} },
+      "lunch":     { ${mealFields} },
+      "snack":     { ${mealFields} },
+      "dinner":    { ${mealFields} }
     }`;
 
   const stageContext = buildStageContext(weaningStage, cuisine);
   const blwContext = buildBlwContext(blwType, weaningStage.id, language);
   const requestContext = parentRequest
     ? `PARENT'S SPECIAL REQUEST TODAY: "${parentRequest}"
-Adapt the meal plan to directly address this. Examples of how to respond:
-- Sleep/stress concern → include magnesium-rich foods (banana, oats, leafy greens), avoid stimulating foods
+Adapt every meal to directly address this concern. Guidance:
+- Sleep/stress → magnesium-rich: banana, oats, leafy greens; avoid stimulating foods
 - Constipation → high-fiber: prunes, pear, broccoli, sweet potato, oats
-- Iron → beef, lentils, spinach, fortified cereal; pair with vitamin C for absorption
+- Iron → beef, lentils, spinach, fortified cereal; pair with vitamin C foods
 - Vitamin A → sweet potato, carrot, butternut squash, mango, spinach
-- Cold/immunity → vitamin C foods, ginger (tiny amounts for older stages), warm broths
+- Cold/immunity → vitamin C foods, warm broths, leafy greens
 - Protein → beef, chicken, lentils, egg yolk, tofu, fish
-- Calcium → yogurt, cheese, broccoli, fortified oats, tofu
-- Specific ingredient mentioned → build at least one meal around that ingredient`
+- Calcium → yogurt, cheese, broccoli, tofu
+- Specific ingredient mentioned → build at least one meal around that ingredient
+
+EXPERT NOTE REQUIREMENT: For each meal, fill expert_note with 1–2 sentences in the same language as the meal (English for meals_en, Korean for meals_ko). Explain specifically WHY this meal helps with the parent's stated concern — name the key ingredient(s) and their benefit. Be warm and reassuring, not clinical.`
     : "";
 
   const systemPrompt = `You are a certified baby nutritionist specializing in infant weaning (이유식). You respond ONLY with valid JSON — no markdown fences, no preamble, no explanation. Your response must start with { and end with }. Never truncate — output the complete JSON.

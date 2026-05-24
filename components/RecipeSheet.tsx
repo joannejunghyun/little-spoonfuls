@@ -124,6 +124,16 @@ export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeShee
 
         {recipe && (
           <div className="flex flex-col gap-6">
+
+            {meal.expert_note && (
+              <div className="bg-[#f0fdf4] rounded-2xl p-4 border border-[#bbf7d0]">
+                <p className="text-[11px] font-black text-emerald-600 uppercase tracking-wider mb-1.5">
+                  💡 {t.expertAdvice}
+                </p>
+                <p className="text-sm text-foreground leading-relaxed">{meal.expert_note}</p>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
                 ⏱ {recipe.total_time}

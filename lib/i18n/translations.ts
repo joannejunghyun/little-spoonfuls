@@ -61,6 +61,7 @@ export const translations = {
     gettingRecipe: "Cooking up the recipe... 🍳",
     saveRecipe: "Save to Recipe Book",
     recipeSavedBtn: "Saved ❤️",
+    expertAdvice: "Expert Advice",
 
     // Recipe Book
     recipeBook: "Recipe Book",
@@ -193,6 +194,7 @@ export const translations = {
     gettingRecipe: "레시피를 불러오는 중이에요... 🍳",
     saveRecipe: "레시피북에 저장하기",
     recipeSavedBtn: "저장됨 ❤️",
+    expertAdvice: "전문가의 조언",
 
     // Recipe Book
     recipeBook: "레시피북",
