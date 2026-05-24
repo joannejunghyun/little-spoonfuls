@@ -67,8 +67,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { baby_id, cuisine, blw_type } = await req.json();
+  const { baby_id, cuisine, blw_type, parent_request } = await req.json();
   const blwType: BlwType = ["blw", "no-blw", "mix"].includes(blw_type) ? blw_type : "no-blw";
+  const parentRequest: string = typeof parent_request === "string" ? parent_request.slice(0, 300) : "";
   const language: "en" | "ko" = user.user_metadata?.language ?? "en";
 
   const [{ data: baby, error: babyError }, { data: todayHistory }] = await Promise.all([
@@ -120,6 +121,18 @@ export async function POST(req: NextRequest) {
 
   const stageContext = buildStageContext(weaningStage, cuisine);
   const blwContext = buildBlwContext(blwType, weaningStage.id, language);
+  const requestContext = parentRequest
+    ? `PARENT'S SPECIAL REQUEST TODAY: "${parentRequest}"
+Adapt the meal plan to directly address this. Examples of how to respond:
+- Sleep/stress concern → include magnesium-rich foods (banana, oats, leafy greens), avoid stimulating foods
+- Constipation → high-fiber: prunes, pear, broccoli, sweet potato, oats
+- Iron → beef, lentils, spinach, fortified cereal; pair with vitamin C for absorption
+- Vitamin A → sweet potato, carrot, butternut squash, mango, spinach
+- Cold/immunity → vitamin C foods, ginger (tiny amounts for older stages), warm broths
+- Protein → beef, chicken, lentils, egg yolk, tofu, fish
+- Calcium → yogurt, cheese, broccoli, fortified oats, tofu
+- Specific ingredient mentioned → build at least one meal around that ingredient`
+    : "";
 
   const systemPrompt = `You are a certified baby nutritionist specializing in infant weaning (이유식). You respond ONLY with valid JSON — no markdown fences, no preamble, no explanation. Your response must start with { and end with }. Never truncate — output the complete JSON.
 IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breast milk or formula" / "모유 또는 분유" — not all parents breastfeed.
@@ -135,7 +148,7 @@ For each meal, include: total_time (e.g. "20 minutes"), servings (e.g. "1 servin
 ${stageContext}
 
 ${blwContext}
-
+${requestContext ? `\n${requestContext}\n` : ""}
 MANDATORY NUTRITION RULES (follow strictly):
 1. At least one meal (lunch or dinner) MUST feature a combination of 3 or more distinct vegetables or produce items.
 2. Vary the vegetables across all four meals — do not repeat the same vegetable in more than one meal.

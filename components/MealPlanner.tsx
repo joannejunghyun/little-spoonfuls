@@ -32,6 +32,7 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
   const [selectedBabyId, setSelectedBabyId] = useState(babies[0].id);
   const [cuisine, setCuisine] = useState("mix");
   const [blwType, setBlwType] = useState<BlwType>("no-blw");
+  const [parentRequest, setParentRequest] = useState("");
   const [mealPlan, setMealPlan] = useState<MealPlanWithMeta | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -52,7 +53,7 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
     const res = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baby_id: selectedBabyId, cuisine, blw_type: blwType }),
+      body: JSON.stringify({ baby_id: selectedBabyId, cuisine, blw_type: blwType, parent_request: parentRequest.trim() }),
     });
 
     const data = await res.json();
@@ -151,6 +152,40 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Parent request chat section */}
+      <div className="flex flex-col gap-2">
+        <label className="text-[11px] font-black text-muted-foreground uppercase tracking-wider">
+          💬 {t.parentRequestLabel}
+        </label>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+          {([...t.parentRequestChips] as string[]).map((chip) => {
+            const active = parentRequest === chip;
+            return (
+              <button
+                key={chip}
+                onClick={() => setParentRequest(active ? "" : chip)}
+                className={`shrink-0 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
+                  active
+                    ? "bg-primary text-white border-primary"
+                    : "bg-white text-muted-foreground border-border hover:border-primary"
+                }`}
+              >
+                {chip}
+              </button>
+            );
+          })}
+        </div>
+
+        <textarea
+          value={parentRequest}
+          onChange={(e) => setParentRequest(e.target.value)}
+          placeholder={t.parentRequestPlaceholder}
+          rows={2}
+          className="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+        />
       </div>
 
       {error && <p className="text-sm text-center text-destructive">{error}</p>}
