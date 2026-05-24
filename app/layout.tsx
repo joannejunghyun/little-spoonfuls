@@ -9,7 +9,7 @@ const geist = Geist({
 
 export const metadata: Metadata = {
   title: "Little Spoonfuls",
-  description: "AI-powered meal planner for your little one",
+  description: "Expert-curated meal planner for your little one",
 };
 
 export default function RootLayout({
@@ -19,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geist.variable} h-full antialiased`}>
-      <body className="min-h-full bg-background text-foreground">{children}</body>
+      <body className="min-h-full bg-background text-foreground" suppressHydrationWarning>{children}</body>
     </html>
   );
 }
