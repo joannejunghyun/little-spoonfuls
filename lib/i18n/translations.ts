@@ -17,9 +17,9 @@ export const translations = {
     manageProfiles: "Manage profiles →",
     todayCuisine: "Today's Cuisine",
     cuisines: {
-      mix: "Global Mix 🌎",
+      mix: "Global Mix 🍽️",
       korean: "Korean 🇰🇷",
-      western: "Western 🇺🇸",
+      western: "Western 🌍",
       chinese: "Chinese 🇨🇳",
     },
     feedingApproach: "Feeding Approach",
@@ -167,9 +167,9 @@ export const translations = {
     manageProfiles: "프로필 관리 →",
     todayCuisine: "오늘의 요리",
     cuisines: {
-      mix: "골고루 🌎",
+      mix: "골고루 🍽️",
       korean: "한식 🇰🇷",
-      western: "양식 🇺🇸",
+      western: "양식 🌍",
       chinese: "중식 🇨🇳",
     },
     feedingApproach: "수유 방식",

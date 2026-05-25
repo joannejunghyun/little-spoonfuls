@@ -160,7 +160,13 @@ async function handleGenerate(req: NextRequest) {
   const allergyNote = allergies.length > 0
     ? `STRICT ALLERGIES TO AVOID: ${allergies.join(", ")}.`
     : "No known allergies.";
-  const cuisineLabel = cuisine === "mix" ? "a global mix (Korean, Western, or Chinese)" : cuisine;
+  const CUISINE_LABELS: Record<string, string> = {
+    mix: "a global mix (Korean, Western, or Chinese)",
+    western: "Western cuisine (freely draw from American, French, Italian, Spanish, and other European styles)",
+    korean: "Korean",
+    chinese: "Chinese",
+  };
+  const cuisineLabel = CUISINE_LABELS[cuisine] ?? cuisine;
 
   const usedMealNames: string[] = [];
   for (const entry of todayHistory ?? []) {
