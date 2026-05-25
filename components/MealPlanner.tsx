@@ -85,7 +85,7 @@ export function MealPlanner({ babies, initialHasVoted }: { babies: Baby[]; initi
   const days = daysOld(selectedBaby.birth_date);
 
   useEffect(() => {
-    const justReachedLimit = remaining === 0 && prevRemaining.current !== null && prevRemaining.current > 0;
+    const justReachedLimit = remaining === 0 && prevRemaining.current !== 0;
     if (justReachedLimit && !hasVoted && !localStorage.getItem(VOTE_POPUP_KEY)) {
       if (voteState) {
         setShowVotePopup(true);
@@ -246,7 +246,7 @@ export function MealPlanner({ babies, initialHasVoted }: { babies: Baby[]; initi
                 <div className="flex flex-wrap gap-1 justify-end max-w-[140px]">
                   {selectedBaby.allergies.map((a) => (
                     <span key={a} className="text-[10px] bg-red-50 text-red-400 border border-red-100 px-1.5 py-0.5 rounded-full">
-                      No {a}
+                      {t.allergyNo((t.allergens as Record<string, string>)[a] ?? a)}
                     </span>
                   ))}
                 </div>

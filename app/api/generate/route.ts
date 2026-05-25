@@ -138,20 +138,24 @@ async function handleGenerate(req: NextRequest) {
   ]);
 
   if (!isAdmin && (count ?? 0) >= DAILY_LIMIT) {
-    return NextResponse.json(
-      { error: `You've reached today's limit of ${DAILY_LIMIT} meal plans. Come back tomorrow! 🌙` },
-      { status: 429 }
-    );
+    const msg = language === "ko"
+      ? `오늘의 추천은 모두 사용했어요 — 내일 새 메뉴로 만나요! 🌙`
+      : `You've reached today's limit of ${DAILY_LIMIT} meal plans. Come back tomorrow! 🌙`;
+    return NextResponse.json({ error: msg }, { status: 429 });
   }
 
   if (babyError || !baby) {
-    return NextResponse.json({ error: "Baby profile not found." }, { status: 404 });
+    const msg = language === "ko" ? "아기 프로필을 찾을 수 없어요." : "Baby profile not found.";
+    return NextResponse.json({ error: msg }, { status: 404 });
   }
 
   const days = Math.floor((Date.now() - new Date(baby.birth_date).getTime()) / 86400000);
 
   if (days < 180) {
-    return NextResponse.json({ error: `${baby.name} isn't ready for solids yet!` }, { status: 400 });
+    const msg = language === "ko"
+      ? `${baby.name}는 아직 이유식을 시작하기엔 조금 일러요 💛 지금은 모유나 분유가 최고예요!`
+      : `${baby.name} isn't ready for solids yet!`;
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   const weaningStage = getWeaningStage(days);
