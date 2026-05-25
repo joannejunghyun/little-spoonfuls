@@ -189,7 +189,7 @@ export const translations = {
       "감기 기운이 있어요 🤧",
     ],
     generateBtn: "오늘 이유식 뭐먹이지? 🥣",
-    loadingBtn: "전문가 레시피에서 딱 맞는 메뉴를 고르는 중이에요... ✨",
+    loadingBtn: "전문가가 딱 맞는 메뉴를 고르는 중이에요... ✨",
     limitBtn: "내일 또 만나요! 🌙",
     remaining: (n: number, _total: number) => `오늘 ${n}번 더 추천받을 수 있어요`,
     limitReached: "오늘 추천은 모두 사용했어요 — 내일 새 메뉴로 만나요!",
