@@ -85,6 +85,15 @@ interface ParsedPlan {
 }
 
 export async function POST(req: NextRequest) {
+  try {
+    return await handleGenerate(req);
+  } catch (err) {
+    console.error("[generate] unhandled error:", err);
+    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+  }
+}
+
+async function handleGenerate(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -98,25 +107,23 @@ export async function POST(req: NextRequest) {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const { count } = await supabase
-    .from("generation_log")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("created_at", todayStart.toISOString());
-
-  if (!isAdmin && (count ?? 0) >= DAILY_LIMIT) {
-    return NextResponse.json(
-      { error: `You've reached today's limit of ${DAILY_LIMIT} meal plans. Come back tomorrow! 🌙` },
-      { status: 429 }
-    );
-  }
-
+  // Parse body first so baby_id is available for parallel DB queries
   const { baby_id, cuisine, blw_type, parent_request } = await req.json();
   const blwType: BlwType = ["blw", "no-blw", "mix"].includes(blw_type) ? blw_type : "no-blw";
   const parentRequest: string = typeof parent_request === "string" ? sanitizeParentRequest(parent_request) : "";
   const language: "en" | "ko" = detectLang(user.user_metadata?.language, req.headers.get("accept-language"));
 
-  const [{ data: baby, error: babyError }, { data: todayHistory }] = await Promise.all([
+  // Fire all three DB queries in parallel (saves ~1 round-trip vs sequential)
+  const [
+    { count },
+    { data: baby, error: babyError },
+    { data: todayHistory },
+  ] = await Promise.all([
+    supabase
+      .from("generation_log")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", todayStart.toISOString()),
     supabase
       .from("babies")
       .select("name, birth_date, diet_type, allergies")
@@ -130,6 +137,13 @@ export async function POST(req: NextRequest) {
       .gte("created_at", todayStart.toISOString()),
   ]);
 
+  if (!isAdmin && (count ?? 0) >= DAILY_LIMIT) {
+    return NextResponse.json(
+      { error: `You've reached today's limit of ${DAILY_LIMIT} meal plans. Come back tomorrow! 🌙` },
+      { status: 429 }
+    );
+  }
+
   if (babyError || !baby) {
     return NextResponse.json({ error: "Baby profile not found." }, { status: 404 });
   }
@@ -142,15 +156,16 @@ export async function POST(req: NextRequest) {
 
   const weaningStage = getWeaningStage(days);
   const months = Math.floor(days / 30);
-  const allergyNote = baby.allergies.length > 0
-    ? `STRICT ALLERGIES TO AVOID: ${baby.allergies.join(", ")}.`
+  const allergies = baby.allergies ?? [];
+  const allergyNote = allergies.length > 0
+    ? `STRICT ALLERGIES TO AVOID: ${allergies.join(", ")}.`
     : "No known allergies.";
   const cuisineLabel = cuisine === "mix" ? "a global mix (Korean, Western, or Chinese)" : cuisine;
 
   const usedMealNames: string[] = [];
   for (const entry of todayHistory ?? []) {
-    const m = entry.meals_en as MealSet;
-    usedMealNames.push(m.breakfast.name, m.lunch.name, m.snack.name, m.dinner.name);
+    const m = entry.meals_en as MealSet | null;
+    if (m?.breakfast) usedMealNames.push(m.breakfast.name, m.lunch.name, m.snack.name, m.dinner.name);
   }
   const dedupRule = usedMealNames.length > 0
     ? `\nALREADY SERVED TODAY — do NOT repeat any of these meals: ${usedMealNames.join(", ")}.`
@@ -268,7 +283,7 @@ Return this exact JSON structure, fully filled in:
       const parsed = JSON.parse(jsonMatch[0]) as ParsedPlan;
 
       // Allergy safety evaluation — annotate the active span
-      const violations = checkAllergyViolations(parsed.meals, baby.allergies);
+      const violations = checkAllergyViolations(parsed.meals, baby.allergies ?? []);
       const span = trace.getActiveSpan();
       if (span) {
         span.setAttribute("eval.allergy_violation", violations.length > 0);

@@ -114,61 +114,74 @@ export function MealPlanner({ babies, initialHasVoted }: { babies: Baby[]; initi
     setTraceId("");
     accumulatedRef.current = "";
 
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ baby_id: selectedBabyId, cuisine, blw_type: blwType, parent_request: parentRequest.trim() }),
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error ?? t.somethingWrong);
-      setLoading(false);
-      return;
-    }
-
-    const headerRemaining = res.headers.get("X-Remaining");
-    if (headerRemaining !== null) setRemaining(Number(headerRemaining));
-    const headerTraceId = res.headers.get("X-Trace-Id");
-    if (headerTraceId) setTraceId(headerTraceId);
-
-    const reader = res.body!.getReader();
-    const decoder = new TextDecoder();
-    const rendered = new Set<string>();
-
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulatedRef.current += decoder.decode(value, { stream: true });
-        const text = accumulatedRef.current;
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ baby_id: selectedBabyId, cuisine, blw_type: blwType, parent_request: parentRequest.trim() }),
+      });
 
-        for (const mealType of MEAL_ORDER) {
-          if (!rendered.has(mealType)) {
-            const meal = tryExtractMeal(text, mealType);
-            if (meal) {
-              rendered.add(mealType);
-              setStreamedMeals((prev) => ({ ...prev, [mealType]: meal }));
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error ?? t.somethingWrong);
+        return;
+      }
+
+      const headerRemaining = res.headers.get("X-Remaining");
+      if (headerRemaining !== null) setRemaining(Number(headerRemaining));
+      const headerTraceId = res.headers.get("X-Trace-Id");
+      if (headerTraceId) setTraceId(headerTraceId);
+
+      const reader = res.body?.getReader();
+
+      if (reader) {
+        const decoder = new TextDecoder();
+        const rendered = new Set<string>();
+        let localStage = "";
+        let localAdvice: string | null = null;
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            accumulatedRef.current += decoder.decode(value, { stream: true });
+            const text = accumulatedRef.current;
+
+            for (const mealType of MEAL_ORDER) {
+              if (!rendered.has(mealType)) {
+                const meal = tryExtractMeal(text, mealType);
+                if (meal) {
+                  rendered.add(mealType);
+                  setStreamedMeals((prev) => ({ ...prev, [mealType]: meal }));
+                }
+              }
+            }
+
+            if (!localStage) {
+              const stage = tryExtractString(text, "stage");
+              if (stage) { localStage = stage; setStreamedStage(stage); }
+            }
+
+            if (!localAdvice) {
+              const advice = tryExtractString(text, "overall_advice");
+              if (advice) { localAdvice = advice; setStreamedAdvice(advice); }
             }
           }
+        } finally {
+          reader.releaseLock();
         }
-
-        if (!streamedStage) {
-          const stage = tryExtractString(text, "stage");
-          if (stage) setStreamedStage(stage);
-        }
-
-        if (!streamedAdvice) {
-          const advice = tryExtractString(text, "overall_advice");
-          if (advice) setStreamedAdvice(advice);
-        }
+      } else {
+        // Fallback for mobile browsers that don't support ReadableStream
+        accumulatedRef.current = await res.text();
       }
-    } finally {
+
+      // Parse final JSON (works for both streaming and fallback paths)
       const jsonMatch = accumulatedRef.current.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
           const parsed = JSON.parse(jsonMatch[0]);
           setMealPlan({ ...parsed, remaining: headerRemaining !== null ? Number(headerRemaining) : null });
+          setStreamedMeals(parsed.meals ?? {});
           setStreamedAdvice(parsed.overall_advice ?? null);
           setStreamedStage(parsed.stage ?? "");
         } catch {
@@ -177,6 +190,9 @@ export function MealPlanner({ babies, initialHasVoted }: { babies: Baby[]; initi
       } else {
         setError(t.somethingWrong);
       }
+    } catch {
+      setError(t.somethingWrong);
+    } finally {
       setLoading(false);
     }
   }
@@ -348,7 +364,7 @@ export function MealPlanner({ babies, initialHasVoted }: { babies: Baby[]; initi
         )}
       </div>
 
-      {(loading || mealPlan) && (
+      {(loading || mealPlan || Object.keys(streamedMeals).length > 0) && (
         <div className="flex flex-col gap-4">
           {(streamedStage || mealPlan?.stage) && (
             <div className="text-center animate-in fade-in duration-300">
