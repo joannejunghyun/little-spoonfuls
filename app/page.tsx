@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MealPlanner } from "@/components/MealPlanner";
 import { UserMenu } from "@/components/UserMenu";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import { LegalFooter } from "@/components/LegalFooter";
 import { translations } from "@/lib/i18n/translations";
 import type { Lang } from "@/lib/i18n/translations";
 import { detectLang } from "@/lib/get-lang";
@@ -55,6 +56,7 @@ export default async function Home() {
             >
               Joanne
             </a>
+            <LegalFooter />
           </footer>
         </div>
       </main>
