@@ -1,4 +1,5 @@
 import { LoginForm } from "@/components/LoginForm";
+import { LegalFooter } from "@/components/LegalFooter";
 
 export default function LoginPage() {
   return (
@@ -11,6 +12,9 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">Sign in to plan your baby&apos;s meals</p>
         </div>
         <LoginForm />
+        <footer className="mt-8 text-center">
+          <LegalFooter />
+        </footer>
       </div>
     </main>
   );
