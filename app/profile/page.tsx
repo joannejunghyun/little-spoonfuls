@@ -4,8 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { ProfileClient } from "@/components/ProfileClient";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { translations, type Lang } from "@/lib/i18n/translations";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { detectLang } from "@/lib/get-lang";
 import { UserMenu } from "@/components/UserMenu";
 
@@ -29,11 +27,6 @@ export default async function ProfilePage() {
         <div className="w-full max-w-md">
           <div className="flex flex-col gap-3 mb-8">
             <div className="flex items-center gap-3">
-              <Link href="/">
-                <Button variant="outline" size="sm" className="rounded-full border-border">
-                  {t.back}
-                </Button>
-              </Link>
               <h1 className="text-xl font-bold text-primary">{t.babyProfiles}</h1>
             </div>
             <UserMenu email={user.email ?? ""} />

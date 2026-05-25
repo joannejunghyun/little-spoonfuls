@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Dialog } from "@base-ui/react/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BabyForm } from "@/components/BabyForm";
@@ -40,6 +41,15 @@ export function ProfileClient({ babies, language: initialLanguage }: { babies: B
   const [showAddForm, setShowAddForm] = useState(babies.length === 0);
   const [language, setLanguage] = useState(initialLanguage);
   const [langLoading, setLangLoading] = useState(false);
+  const [showBackPopup, setShowBackPopup] = useState(false);
+
+  function handleBack() {
+    if (babies.length === 0) {
+      setShowBackPopup(true);
+    } else {
+      router.push("/");
+    }
+  }
 
   async function changeLanguage(lang: Lang) {
     if (lang === language) return;
@@ -52,6 +62,33 @@ export function ProfileClient({ babies, language: initialLanguage }: { babies: B
 
   return (
     <div className="flex flex-col gap-4">
+      <Dialog.Root open={showBackPopup} onOpenChange={setShowBackPopup}>
+        <Dialog.Portal>
+          <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm data-ending-style:opacity-0 data-starting-style:opacity-0 transition-opacity duration-150" />
+          <Dialog.Popup className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2.5rem)] max-w-sm bg-white rounded-3xl shadow-xl p-6 flex flex-col gap-4 data-ending-style:opacity-0 data-starting-style:opacity-0 transition-opacity duration-150">
+            <div className="flex flex-col gap-1.5">
+              <Dialog.Title className="text-base font-bold text-foreground">
+                {t.noProfilePopupTitle}
+              </Dialog.Title>
+              <Dialog.Description className="text-sm text-muted-foreground leading-relaxed">
+                {t.noProfilePopupBody}
+              </Dialog.Description>
+            </div>
+            <Dialog.Close
+              render={<Button className="w-full rounded-2xl" />}
+            >
+              {t.noProfilePopupStay}
+            </Dialog.Close>
+          </Dialog.Popup>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      <button
+        onClick={handleBack}
+        className="self-start text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {t.back}
+      </button>
       <Card className="rounded-3xl shadow-sm border-border">
         <CardContent className="pt-5 pb-5">
           <p className="text-[11px] font-black text-muted-foreground uppercase tracking-wider mb-3">
