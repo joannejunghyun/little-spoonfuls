@@ -1,24 +1,29 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { MealPlanner } from "@/components/MealPlanner";
 import { UserMenu } from "@/components/UserMenu";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { translations } from "@/lib/i18n/translations";
 import type { Lang } from "@/lib/i18n/translations";
+import { detectLang } from "@/lib/get-lang";
 
 export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const lang: Lang = user.user_metadata?.language ?? "en";
+  const lang: Lang = detectLang(user.user_metadata?.language, (await headers()).get("accept-language"));
   const t = translations[lang];
 
-  const { data: babies } = await supabase
-    .from("babies")
-    .select("id, name, birth_date, diet_type, allergies")
-    .eq("user_id", user.id)
-    .order("created_at");
+  const [{ data: babies }, { data: myVote }] = await Promise.all([
+    supabase
+      .from("babies")
+      .select("id, name, birth_date, diet_type, allergies")
+      .eq("user_id", user.id)
+      .order("created_at"),
+    supabase.from("votes").select("id").eq("user_id", user.id).maybeSingle(),
+  ]);
 
   if (!babies || babies.length === 0) redirect("/profile");
 
@@ -37,7 +42,7 @@ export default async function Home() {
             {t.appTagline}
           </p>
 
-          <MealPlanner babies={babies} />
+          <MealPlanner babies={babies} initialHasVoted={!!myVote} />
 
           <footer className="text-center mt-12 text-xs text-muted-foreground leading-relaxed">
             {t.footerText}<br />

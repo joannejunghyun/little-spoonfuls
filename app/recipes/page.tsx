@@ -1,17 +1,19 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { RecipeBookClient } from "@/components/RecipeBookClient";
 import { translations, type Lang } from "@/lib/i18n/translations";
+import { detectLang } from "@/lib/get-lang";
 
 export default async function RecipesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const lang: Lang = user.user_metadata?.language ?? "en";
+  const lang: Lang = detectLang(user.user_metadata?.language, (await headers()).get("accept-language"));
   const t = translations[lang];
 
   const { data: recipes } = await supabase

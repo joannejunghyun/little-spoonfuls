@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,21 +12,55 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MealCard } from "@/components/MealCard";
+import { VotePopup } from "@/components/VotePopup";
 import { useLanguage, useLang } from "@/components/LanguageProvider";
 import { getWeaningStage } from "@/lib/weaning-context";
-import type { MealPlan } from "@/app/api/generate/route";
+import type { MealPlan, Meal } from "@/app/api/generate/route";
 import type { Baby } from "@/app/api/babies/route";
 import type { BlwType } from "@/lib/blw-context";
 
 const DAILY_LIMIT = 3;
+const VOTE_POPUP_KEY = "vote_popup_seen";
+const MEAL_ORDER = ["breakfast", "lunch", "snack", "dinner"] as const;
+type MealType = typeof MEAL_ORDER[number];
 
 type MealPlanWithMeta = MealPlan & { remaining: number | null };
+
+function tryExtractMeal(text: string, key: string): Meal | null {
+  const marker = `"${key}"`;
+  const idx = text.indexOf(marker);
+  if (idx === -1) return null;
+  const braceStart = text.indexOf("{", idx + marker.length);
+  if (braceStart === -1) return null;
+  let depth = 0;
+  for (let i = braceStart; i < text.length; i++) {
+    if (text[i] === "{") depth++;
+    else if (text[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        try { return JSON.parse(text.slice(braceStart, i + 1)) as Meal; } catch { return null; }
+      }
+    }
+  }
+  return null;
+}
+
+function tryExtractString(text: string, key: string): string | null {
+  const match = text.match(new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"` ));
+  return match ? match[1] : null;
+}
+
+interface VoteState {
+  count: number;
+  target: number;
+  hasVoted: boolean;
+}
 
 function daysOld(birthDate: string) {
   return Math.floor((Date.now() - new Date(birthDate).getTime()) / 86400000);
 }
 
-export function MealPlanner({ babies }: { babies: Baby[] }) {
+export function MealPlanner({ babies, initialHasVoted }: { babies: Baby[]; initialHasVoted: boolean }) {
   const t = useLanguage();
   const lang = useLang();
   const [selectedBabyId, setSelectedBabyId] = useState(babies[0].id);
@@ -34,12 +68,37 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
   const [blwType, setBlwType] = useState<BlwType>("no-blw");
   const [parentRequest, setParentRequest] = useState("");
   const [mealPlan, setMealPlan] = useState<MealPlanWithMeta | null>(null);
+  const [streamedMeals, setStreamedMeals] = useState<Partial<Record<MealType, Meal>>>({});
+  const [streamedStage, setStreamedStage] = useState("");
+  const [streamedAdvice, setStreamedAdvice] = useState<string | null>(null);
   const [remaining, setRemaining] = useState<number | null>(null);
+  const [traceId, setTraceId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasVoted, setHasVoted] = useState(initialHasVoted);
+  const [showVotePopup, setShowVotePopup] = useState(false);
+  const [voteState, setVoteState] = useState<VoteState | null>(null);
+  const prevRemaining = useRef<number | null>(null);
+  const accumulatedRef = useRef("");
 
   const selectedBaby = babies.find((b) => b.id === selectedBabyId) ?? babies[0];
   const days = daysOld(selectedBaby.birth_date);
+
+  useEffect(() => {
+    const justReachedLimit = remaining === 0 && prevRemaining.current !== null && prevRemaining.current > 0;
+    if (justReachedLimit && !hasVoted && !localStorage.getItem(VOTE_POPUP_KEY)) {
+      if (voteState) {
+        setShowVotePopup(true);
+      } else {
+        fetch("/api/vote").then((r) => r.json()).then((data: VoteState) => {
+          setVoteState(data);
+          setHasVoted(data.hasVoted);
+          if (!data.hasVoted) setShowVotePopup(true);
+        });
+      }
+    }
+    prevRemaining.current = remaining;
+  }, [remaining, hasVoted, voteState]);
 
   async function generateMenu() {
     if (days < 180) {
@@ -49,6 +108,11 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
     setError("");
     setLoading(true);
     setMealPlan(null);
+    setStreamedMeals({});
+    setStreamedStage("");
+    setStreamedAdvice(null);
+    setTraceId("");
+    accumulatedRef.current = "";
 
     const res = await fetch("/api/generate", {
       method: "POST",
@@ -56,22 +120,88 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
       body: JSON.stringify({ baby_id: selectedBabyId, cuisine, blw_type: blwType, parent_request: parentRequest.trim() }),
     });
 
-    const data = await res.json();
-
     if (!res.ok) {
+      const data = await res.json();
       setError(data.error ?? t.somethingWrong);
       setLoading(false);
       return;
     }
 
-    setMealPlan(data);
-    setRemaining(data.remaining);
-    setLoading(false);
+    const headerRemaining = res.headers.get("X-Remaining");
+    if (headerRemaining !== null) setRemaining(Number(headerRemaining));
+    const headerTraceId = res.headers.get("X-Trace-Id");
+    if (headerTraceId) setTraceId(headerTraceId);
+
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    const rendered = new Set<string>();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        accumulatedRef.current += decoder.decode(value, { stream: true });
+        const text = accumulatedRef.current;
+
+        for (const mealType of MEAL_ORDER) {
+          if (!rendered.has(mealType)) {
+            const meal = tryExtractMeal(text, mealType);
+            if (meal) {
+              rendered.add(mealType);
+              setStreamedMeals((prev) => ({ ...prev, [mealType]: meal }));
+            }
+          }
+        }
+
+        if (!streamedStage) {
+          const stage = tryExtractString(text, "stage");
+          if (stage) setStreamedStage(stage);
+        }
+
+        if (!streamedAdvice) {
+          const advice = tryExtractString(text, "overall_advice");
+          if (advice) setStreamedAdvice(advice);
+        }
+      }
+    } finally {
+      const jsonMatch = accumulatedRef.current.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          setMealPlan({ ...parsed, remaining: headerRemaining !== null ? Number(headerRemaining) : null });
+          setStreamedAdvice(parsed.overall_advice ?? null);
+          setStreamedStage(parsed.stage ?? "");
+        } catch {
+          setError(t.somethingWrong);
+        }
+      } else {
+        setError(t.somethingWrong);
+      }
+      setLoading(false);
+    }
   }
 
   const isLimitReached = remaining !== null && remaining <= 0;
 
+  function handleClosePopup() {
+    localStorage.setItem(VOTE_POPUP_KEY, "true");
+    setShowVotePopup(false);
+  }
+
+  function handleVoted(newState: VoteState) {
+    setVoteState(newState);
+    setHasVoted(true);
+  }
+
   return (
+    <>
+    {showVotePopup && voteState && (
+      <VotePopup
+        initialVote={voteState}
+        onVoted={handleVoted}
+        onClose={handleClosePopup}
+      />
+    )}
     <div className="flex flex-col gap-6">
       <div className="bg-[#fff9f4] rounded-3xl p-5 border border-[#ffefe0] flex flex-col gap-4">
         <div className="flex flex-col gap-1">
@@ -218,50 +348,62 @@ export function MealPlanner({ babies }: { babies: Baby[] }) {
         )}
       </div>
 
-      {loading && (
+      {(loading || mealPlan) && (
         <div className="flex flex-col gap-4">
-          {["🌅", "☀️", "🍎", "🌙"].map((icon, i) => (
-            <div
-              key={i}
-              className="rounded-3xl border border-border bg-card p-4 animate-pulse"
-              style={{ animationDelay: `${i * 0.1}s` }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-2xl bg-muted flex items-center justify-center text-base shrink-0">
-                  {icon}
-                </div>
-                <div className="flex flex-col gap-2 flex-1">
-                  <div className="h-3 bg-muted rounded-full w-2/3" />
-                  <div className="h-2.5 bg-muted rounded-full w-1/2" />
-                </div>
-              </div>
+          {(streamedStage || mealPlan?.stage) && (
+            <div className="text-center animate-in fade-in duration-300">
+              <Badge className="bg-[#f0faff] text-[#74b9ff] border-0 text-xs font-bold px-4 py-1">
+                ✨ {streamedStage || mealPlan?.stage}
+              </Badge>
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {!loading && mealPlan && (
-        <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="text-center">
-            <Badge className="bg-[#f0faff] text-[#74b9ff] border-0 text-xs font-bold px-4 py-1">
-              ✨ {mealPlan.stage}
-            </Badge>
-          </div>
-
-          {mealPlan.overall_advice && (
-            <div className="bg-[#f0fdf4] rounded-3xl p-4 border border-[#bbf7d0]">
+          {streamedAdvice && (
+            <div className="bg-[#f0fdf4] rounded-3xl p-4 border border-[#bbf7d0] animate-in fade-in slide-in-from-bottom-2 duration-400">
               <p className="text-[11px] font-black text-emerald-600 uppercase tracking-wider mb-2">
                 💡 {t.overallAdvice}
               </p>
-              <p className="text-sm text-foreground leading-relaxed">{mealPlan.overall_advice}</p>
+              <p className="text-sm text-foreground leading-relaxed">{streamedAdvice}</p>
             </div>
           )}
-          <MealCard type={t.breakfast} meal={mealPlan.meals.breakfast} stage={mealPlan.stage} />
-          <MealCard type={t.lunch} meal={mealPlan.meals.lunch} stage={mealPlan.stage} />
-          <MealCard type={t.snack} meal={mealPlan.meals.snack} stage={mealPlan.stage} />
-          <MealCard type={t.dinner} meal={mealPlan.meals.dinner} stage={mealPlan.stage} />
+
+          {(["🌅", "☀️", "🍎", "🌙"] as const).map((icon, i) => {
+            const mealType = MEAL_ORDER[i];
+            const meal = streamedMeals[mealType] ?? mealPlan?.meals[mealType];
+            const stage = streamedStage || mealPlan?.stage || "";
+            if (meal) {
+              return (
+                <div key={mealType} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <MealCard
+                    type={t[mealType]}
+                    meal={meal}
+                    stage={stage}
+                    traceId={traceId}
+                  />
+                </div>
+              );
+            }
+            return (
+              <div
+                key={mealType}
+                className="rounded-3xl border border-border bg-card p-4 animate-pulse"
+                style={{ animationDelay: `${i * 0.1}s` }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-2xl bg-muted flex items-center justify-center text-base shrink-0">
+                    {icon}
+                  </div>
+                  <div className="flex flex-col gap-2 flex-1">
+                    <div className="h-3 bg-muted rounded-full w-2/3" />
+                    <div className="h-2.5 bg-muted rounded-full w-1/2" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
+    </>
   );
 }

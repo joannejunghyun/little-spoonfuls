@@ -59,14 +59,14 @@ export const translations = {
     howToMake: "How to Make",
     parentTip: "Parent Tip 💡",
     gettingRecipe: "Cooking up the recipe... 🍳",
-    saveRecipe: "Save to Recipe Book",
+    saveRecipe: "Save to Favorites",
     recipeSavedBtn: "Saved ❤️",
     expertAdvice: "Expert Advice",
     overallAdvice: "Today's Expert Advice",
 
-    // Recipe Book
-    recipeBook: "Recipe Book",
-    recipeBookTitle: "My Recipe Book",
+    // Favorites
+    recipeBook: "Favorites",
+    recipeBookTitle: "My Favorites",
     allIngredients: "All",
     noRecipesYet: "No recipes saved yet",
     noRecipesDesc: "Tap any meal card, view the recipe, then hit ❤️ to save it here 📖",
@@ -128,6 +128,17 @@ export const translations = {
       Fish: "Fish",
       Shellfish: "Shellfish",
     },
+
+    // Vote
+    voteTitle: "Want unlimited meal plans?",
+    voteDesc: "$4.99/mo for unlimited daily suggestions. Vote to let us know you're interested — early voters get a launch discount!",
+    voteProgress: (n: number, target: number) => `${n} of ${target} votes`,
+    voteNeeded: (n: number) => `${n} more needed`,
+    voteGoalReached: "Goal reached! 🎉",
+    voteBtn: "Count me in! ✋",
+    voteThanks: "You're in! Thanks for voting 🎉",
+    voteEarlyBird: "You'll get an early-bird discount when we launch.",
+    voteLater: "Not now",
 
     // Errors
     notReadyYet: (name: string) => `${name} isn't quite ready for solids yet — breast milk or formula is still best! 💛`,
@@ -193,14 +204,14 @@ export const translations = {
     howToMake: "만드는 방법",
     parentTip: "이런 점도 알아두세요 💡",
     gettingRecipe: "레시피를 불러오는 중이에요... 🍳",
-    saveRecipe: "레시피북에 저장하기",
+    saveRecipe: "찜한 메뉴에 저장하기",
     recipeSavedBtn: "저장됨 ❤️",
     expertAdvice: "전문가의 조언",
     overallAdvice: "오늘의 전문가 조언",
 
-    // Recipe Book
-    recipeBook: "레시피북",
-    recipeBookTitle: "나만의 레시피북",
+    // Favorites
+    recipeBook: "찜한 메뉴",
+    recipeBookTitle: "찜한 메뉴",
     allIngredients: "전체",
     noRecipesYet: "저장된 레시피가 없어요",
     noRecipesDesc: "메뉴 카드를 탭해서 레시피를 보고, ❤️ 를 눌러 저장하세요 📖",
@@ -274,6 +285,17 @@ export const translations = {
       Fish: "생선",
       Shellfish: "갑각류",
     },
+
+    // Vote
+    voteTitle: "무제한 메뉴 추천을 원하시나요?",
+    voteDesc: "월 $4.99로 하루 제한 없이 메뉴를 추천받을 수 있어요. 관심 있다면 투표해주세요 — 얼리버드 할인 혜택을 드려요!",
+    voteProgress: (n: number, target: number) => `${n}/${target}명 투표 완료`,
+    voteNeeded: (n: number) => `${n}명 더 필요해요`,
+    voteGoalReached: "목표 달성! 🎉",
+    voteBtn: "저도 원해요! ✋",
+    voteThanks: "투표해 주셔서 감사해요 🎉",
+    voteEarlyBird: "출시 시 얼리버드 할인 혜택을 드릴게요.",
+    voteLater: "나중에요",
 
     // Errors
     notReadyYet: (name: string) => `${name}는 아직 이유식을 시작하기엔 조금 일러요 💛 지금은 모유나 분유가 최고예요!`,

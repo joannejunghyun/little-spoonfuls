@@ -1,17 +1,19 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileClient } from "@/components/ProfileClient";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { translations, type Lang } from "@/lib/i18n/translations";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { detectLang } from "@/lib/get-lang";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const lang: Lang = user.user_metadata?.language ?? "en";
+  const lang: Lang = detectLang(user.user_metadata?.language, (await headers()).get("accept-language"));
   const t = translations[lang];
 
   const { data: babies } = await supabase

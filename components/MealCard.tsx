@@ -22,9 +22,10 @@ interface MealCardProps {
   type: string;
   meal: Meal;
   stage?: string;
+  traceId?: string;
 }
 
-export function MealCard({ type, meal, stage = "" }: MealCardProps) {
+export function MealCard({ type, meal, stage = "", traceId = "" }: MealCardProps) {
   const t = useLanguage();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -57,6 +58,7 @@ export function MealCard({ type, meal, stage = "" }: MealCardProps) {
         meal={meal}
         mealType={type}
         stage={stage}
+        traceId={traceId}
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
       />

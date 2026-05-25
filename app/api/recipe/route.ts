@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { detectLang } from "@/lib/get-lang";
 
 const client = new Anthropic();
 
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const language: "en" | "ko" = user.user_metadata?.language ?? "en";
+  const language: "en" | "ko" = detectLang(user.user_metadata?.language, req.headers.get("accept-language"));
   const { meal_name, stage, ingredients } = await req.json();
 
   const isKorean = language === "ko";

@@ -11,16 +11,22 @@ A baby food meal planner app for parents who want nutritious, stage-appropriate 
 ### 🍚 Expert-Curated Meal Recommendations
 - Generates a full day's meal plan (breakfast, lunch, snack, dinner) tailored to your baby's age, diet, and allergies
 - Automatically detects weaning stage: Early (6–7M) → Middle (7–9M) → Late (10–12M) → Completion (12M+)
-- Recommendations are grounded in guidance from 7 international infant nutrition research sources (see below)
+- Recommendations are grounded in guidance from 8 international infant nutrition research sources (see below)
 - Deduplication: already-served meals today are never repeated
 - Daily limit of 3 suggestions to encourage variety
+- Meals stream progressively — first card appears in ~3s
+
+### 💬 Parent Special Request
+- Free-text input for specific concerns: poor sleep, constipation, needs iron, vitamin A, cold, protein, calcium, or a specific ingredient at home
+- Quick-select chips for the most common requests
+- When a request is given, every meal is adapted to address it and an **expert advice card** explains the day's nutritional strategy
+- Each meal card also includes a one-sentence expert note explaining why that meal helps
 
 ### 👐 Baby-Led Weaning (BLW) Support
 - Choose your feeding approach: **Traditional (spoon-fed)**, **Baby-Led Weaning**, or **Mixed**
 - BLW mode generates self-feedable finger food meals with stage-appropriate shapes and sizes (e.g. 7–8cm sticks for 6–7M, soft cubes for 8–9M)
 - Mixed mode ensures at least 2 out of 4 meals include finger food options; snack is always BLW-style
 - Built-in choking safety rules applied to every BLW meal (no whole grapes, hard raw veg, honey, etc.)
-- Bilingual finger food examples (English + Korean) for each stage
 
 ### 🌏 Cuisine Selection
 - **Global Mix** — draws from Korean, Western, and Chinese weaning traditions
@@ -28,9 +34,9 @@ A baby food meal planner app for parents who want nutritious, stage-appropriate 
 - **Western** — purées, frittatas, fish fingers, oat pancakes
 - **Chinese** — congee-style dishes and steamed options
 
-### 📖 Recipe Detail & Recipe Book
+### ❤️ Favorites
 - Tap any meal card to load a full recipe: ingredients, step-by-step method, and a parent tip
-- Every viewed recipe is automatically saved to your personal Recipe Book
+- Save recipes you love with the ❤️ button — stored in your personal Favorites list
 - Filter saved recipes by ingredient
 
 ### 👶 Multi-Baby Profiles
@@ -44,8 +50,13 @@ A baby food meal planner app for parents who want nutritious, stage-appropriate 
 - Browse past menus by date
 
 ### 🌐 Full English / Korean Bilingual Support
-- Every meal plan and recipe is generated in both English and Korean simultaneously
+- Meal plans and recipes generated in the user's chosen language
 - Switch language in profile settings — the entire app UI updates instantly
+
+### 📊 LLM Observability (Arize Phoenix)
+- Every generation traced end-to-end via OpenTelemetry + Arize Phoenix
+- Allergy safety monitoring: violations logged as span attributes in real time
+- Favorites signal: each ❤️ save annotates the originating trace as a HUMAN quality signal
 
 ---
 
@@ -71,8 +82,9 @@ Meal recommendations are grounded in the following materials:
 | Area | Technology |
 |------|------------|
 | Framework | Next.js 16 (App Router) |
-| AI | Claude Haiku (Anthropic) |
+| AI | Claude Haiku 4.5 (Anthropic) — streaming + prompt caching |
 | Database & Auth | Supabase (PostgreSQL + Google OAuth + Magic Link) |
+| Observability | Arize Phoenix (OpenTelemetry tracing + human feedback) |
 | UI | Tailwind CSS v4 + shadcn/ui |
 | Language | TypeScript |
 | Deployment | Vercel |
@@ -93,6 +105,8 @@ ANTHROPIC_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+PHOENIX_COLLECTOR_ENDPOINT=https://app.phoenix.arize.com
+PHOENIX_API_KEY=
 ```
 
 ---
@@ -121,13 +135,19 @@ Made with ❤️ by [Joanne](https://www.linkedin.com/in/junghyunhao/) — for D
 - 국내외 유아식 전문가 자료 8종을 바탕으로 선별된 레시피
 - 오늘 이미 추천된 메뉴는 중복 제외
 - 하루 3회 추천 제한으로 매번 새로운 구성
+- 스트리밍 방식으로 첫 메뉴 카드가 약 3초 내 표시
+
+### 💬 부모 특별 요청
+- 잠을 설쳤어요, 변비, 철분 부족, 비타민A, 감기, 단백질, 칼슘, 특정 재료 등 자유롭게 입력
+- 자주 쓰는 요청은 칩으로 빠르게 선택
+- 요청이 있으면 모든 메뉴가 해당 관심사에 맞게 조정되고, 오늘의 영양 전략을 설명하는 **전문가 조언 카드** 표시
+- 각 메뉴 카드에도 왜 이 메뉴가 도움이 되는지 한 줄 전문가 노트 제공
 
 ### 👐 자기주도이유식 (BLW) 지원
 - 수유 방식 선택: **일반 이유식 (숟가락)**, **자기주도이유식 (BLW)**, **혼합 방식**
 - BLW 선택 시 단계별 핑거푸드 형태로 메뉴 구성 (6–7개월: 7–8cm 스틱, 8–9개월: 부드러운 큐브 등)
 - 혼합 방식: 4끼 중 최소 2끼 + 간식은 항상 BLW 형태
 - 질식 방지 안전 규칙 내장 (포도 통째, 딱딱한 날 채소, 꿀 등 자동 제외)
-- 각 단계별 핑거푸드 예시 한국어·영어 동시 제공
 
 ### 🌏 요리 스타일 선택
 - **골고루** — 한식·양식·중식 균형 있게
@@ -135,9 +155,9 @@ Made with ❤️ by [Joanne](https://www.linkedin.com/in/junghyunhao/) — for D
 - **양식** — 퓨레, 프리타타, 생선 핑거, 오트 팬케이크
 - **중식** — 죽 스타일 요리, 찐 채소 메뉴
 
-### 📖 레시피 상세보기 & 레시피북
+### ❤️ 찜한 메뉴
 - 메뉴 카드 탭 → 재료·만드는 방법·부모 팁 확인
-- 조회한 레시피는 나만의 레시피북에 자동 저장
+- ❤️ 버튼으로 마음에 드는 레시피 저장
 - 재료별 필터로 원하는 레시피 빠르게 탐색
 
 ### 👶 멀티 아기 프로필
@@ -151,8 +171,13 @@ Made with ❤️ by [Joanne](https://www.linkedin.com/in/junghyunhao/) — for D
 - 날짜별로 모아보기
 
 ### 🌐 한국어 / 영어 완전 지원
-- 메뉴와 레시피 모두 한국어·영어로 동시 생성
+- 선택한 언어로 메뉴와 레시피 생성
 - 프로필에서 언어 전환 시 앱 전체 UI 즉시 변경
+
+### 📊 LLM 관찰성 (Arize Phoenix)
+- OpenTelemetry 기반 생성 요청 전체 추적
+- 알레르기 안전 모니터링: 위반 감지 시 실시간 스팬 속성 기록
+- 찜한 메뉴 신호: ❤️ 저장 시 해당 트레이스에 사람 피드백 어노테이션 기록
 
 ---
 
@@ -176,8 +201,9 @@ Made with ❤️ by [Joanne](https://www.linkedin.com/in/junghyunhao/) — for D
 | 영역 | 기술 |
 |------|------|
 | Framework | Next.js 16 (App Router) |
-| AI | Claude Haiku (Anthropic) |
+| AI | Claude Haiku 4.5 (Anthropic) — 스트리밍 + 프롬프트 캐싱 |
 | Database & Auth | Supabase (PostgreSQL + Google OAuth + Magic Link) |
+| Observability | Arize Phoenix (OpenTelemetry 추적 + 사람 피드백) |
 | UI | Tailwind CSS v4 + shadcn/ui |
 | Language | TypeScript |
 | Deployment | Vercel |
@@ -198,6 +224,8 @@ ANTHROPIC_API_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+PHOENIX_COLLECTOR_ENDPOINT=https://app.phoenix.arize.com
+PHOENIX_API_KEY=
 ```
 
 ---

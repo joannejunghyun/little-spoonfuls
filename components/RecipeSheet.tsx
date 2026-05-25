@@ -18,11 +18,12 @@ interface RecipeSheetProps {
   meal: Meal;
   mealType: string;
   stage: string;
+  traceId?: string;
   open: boolean;
   onClose: () => void;
 }
 
-export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeSheetProps) {
+export function RecipeSheet({ meal, mealType, stage, traceId = "", open, onClose }: RecipeSheetProps) {
   const t = useLanguage();
   const hasEmbedded = !!(meal.steps && meal.steps.length > 0);
 
@@ -81,6 +82,13 @@ export function RecipeSheet({ meal, mealType, stage, open, onClose }: RecipeShee
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ meal_name: meal.name, stage, recipe: recipeToSave }),
     });
+    if (traceId) {
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trace_id: traceId, meal_name: meal.name }),
+      }).catch(console.error);
+    }
     setSaved(true);
     setSaving(false);
   }

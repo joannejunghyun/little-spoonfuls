@@ -1,8 +1,30 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { trace } from "@opentelemetry/api";
 import { createClient } from "@/lib/supabase/server";
 import { getWeaningStage, buildStageContext } from "@/lib/weaning-context";
 import { buildBlwContext, type BlwType } from "@/lib/blw-context";
+import { detectLang } from "@/lib/get-lang";
+
+const ALLERGEN_KEYWORDS: Record<string, string[]> = {
+  Egg: ["egg", "eggs", "yolk", "달걀", "계란"],
+  Dairy: ["milk", "dairy", "cheese", "butter", "yogurt", "cream", "유제품", "치즈", "버터", "요거트", "우유"],
+  Peanut: ["peanut", "groundnut", "땅콩"],
+  "Tree Nuts": ["almond", "walnut", "cashew", "pecan", "hazelnut", "pistachio", "견과류", "아몬드", "호두"],
+  Wheat: ["wheat", "flour", "bread", "pasta", "noodle", "밀", "밀가루", "빵", "국수"],
+  Soy: ["soy", "tofu", "edamame", "miso", "두부", "콩", "두유"],
+  Fish: ["salmon", "tuna", "cod", "haddock", "fish", "연어", "참치", "생선", "대구"],
+  Shellfish: ["shrimp", "crab", "lobster", "prawn", "새우", "게", "조개"],
+};
+
+function checkAllergyViolations(meals: MealSet, allergies: string[]): string[] {
+  if (allergies.length === 0) return [];
+  const text = JSON.stringify(meals).toLowerCase();
+  return allergies.filter((allergen) => {
+    const keywords = ALLERGEN_KEYWORDS[allergen] ?? [allergen.toLowerCase()];
+    return keywords.some((kw) => text.includes(kw));
+  });
+}
 
 const client = new Anthropic();
 const DAILY_LIMIT = 3;
@@ -24,26 +46,21 @@ export interface Meal {
   ingredients: string[];
   prep: string;
   nutrition: string;
-  // Embedded recipe — populated at generation time to avoid a second API call
   steps?: string[];
   total_time?: string;
   servings?: string;
   tips?: string;
-  // Populated only when a parent request was provided
   expert_note?: string;
 }
 
 type MealSet = MealPlan["meals"];
 
-interface BilingualPlan {
+interface ParsedPlan {
   stage: string;
   cuisine: string;
-  overall_advice_en?: string;
-  overall_advice_ko?: string;
-  meals_en: MealSet;
-  meals_ko: MealSet;
+  overall_advice?: string;
+  meals: MealSet;
 }
-
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -75,7 +92,7 @@ export async function POST(req: NextRequest) {
   const { baby_id, cuisine, blw_type, parent_request } = await req.json();
   const blwType: BlwType = ["blw", "no-blw", "mix"].includes(blw_type) ? blw_type : "no-blw";
   const parentRequest: string = typeof parent_request === "string" ? parent_request.slice(0, 300) : "";
-  const language: "en" | "ko" = user.user_metadata?.language ?? "en";
+  const language: "en" | "ko" = detectLang(user.user_metadata?.language, req.headers.get("accept-language"));
 
   const [{ data: baby, error: babyError }, { data: todayHistory }] = await Promise.all([
     supabase
@@ -118,8 +135,8 @@ export async function POST(req: NextRequest) {
     : "";
 
   const mealFields = parentRequest
-    ? `"name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": "", "expert_note": ""`
-    : `"name": "", "ingredients": [], "prep": "", "nutrition": "", "total_time": "", "servings": "", "steps": [], "tips": ""`;
+    ? `"name": "", "ingredients": [], "prep": "", "nutrition": "", "expert_note": ""`
+    : `"name": "", "ingredients": [], "prep": "", "nutrition": ""`;
 
   const mealTemplate = `{
       "breakfast": { ${mealFields} },
@@ -128,8 +145,11 @@ export async function POST(req: NextRequest) {
       "dinner":    { ${mealFields} }
     }`;
 
+  // Split into cached (static per stage+blwType) and dynamic (per-request) parts
   const stageContext = buildStageContext(weaningStage, cuisine);
   const blwContext = buildBlwContext(blwType, weaningStage.id, language);
+  const langLabel = language === "ko" ? "Korean (한국어)" : "English";
+
   const requestContext = parentRequest
     ? `PARENT'S SPECIAL REQUEST TODAY: "${parentRequest}"
 Adapt every meal to directly address this concern. Guidance:
@@ -142,25 +162,20 @@ Adapt every meal to directly address this concern. Guidance:
 - Calcium → yogurt, cheese, broccoli, tofu
 - Specific ingredient mentioned → build at least one meal around that ingredient
 
-OVERALL ADVICE REQUIREMENT: Fill overall_advice_en and overall_advice_ko with 2–4 sentences summarising the big-picture nutritional strategy for the whole day in response to the parent's concern. Explain which nutrients/foods you prioritised across the day and why. Warm, reassuring tone — like a trusted nutritionist friend, not a textbook.
+OVERALL ADVICE REQUIREMENT: Fill overall_advice with 2–3 sentences in ${langLabel} summarising the nutritional strategy for the day. Warm, reassuring tone.
 
-EXPERT NOTE REQUIREMENT: For each meal, fill expert_note with 1–2 sentences in the same language as the meal (English for meals_en, Korean for meals_ko). Explain specifically WHY this meal helps with the parent's stated concern — name the key ingredient(s) and their benefit. Be warm and reassuring, not clinical.`
+EXPERT NOTE REQUIREMENT: For each meal, fill expert_note with 1 sentence in ${langLabel} explaining why this meal helps with the parent's concern. Be warm, not clinical.`
     : "";
 
   const systemPrompt = `You are a certified baby nutritionist specializing in infant weaning (이유식). You respond ONLY with valid JSON — no markdown fences, no preamble, no explanation. Your response must start with { and end with }. Never truncate — output the complete JSON.
-IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breast milk or formula" / "모유 또는 분유" — not all parents breastfeed.
-For each meal, include: total_time (e.g. "20 minutes"), servings (e.g. "1 serving ~120g"), 3–5 clear cooking steps in steps[], and one practical parent tip in tips.`;
+IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breast milk or formula" / "모유 또는 분유" — not all parents breastfeed.`;
 
-  const prompt = `Baby details:
+  const dynamicPrompt = `Baby details:
 - Name: ${baby.name}
 - Age: ${days} days (approximately ${months} months)
 - Diet type: ${baby.diet_type === "all" ? "Omnivore (meat, fish, dairy, eggs OK)" : baby.diet_type === "vegetarian" ? "Vegetarian (no meat/fish, dairy/eggs OK)" : "Vegan (no animal products)"}
 - Cuisine style: ${cuisineLabel}
 - ${allergyNote}${dedupRule}
-
-${stageContext}
-
-${blwContext}
 ${requestContext ? `\n${requestContext}\n` : ""}
 MANDATORY NUTRITION RULES (follow strictly):
 1. At least one meal (lunch or dinner) MUST feature a combination of 3 or more distinct vegetables or produce items.
@@ -169,68 +184,114 @@ MANDATORY NUTRITION RULES (follow strictly):
 4. ${blwType === "blw" ? "ALL meals must be BLW finger-food format — no spoon-fed purées. See feeding approach section above." : blwType === "mix" ? "At least 2 of 4 meals must have a BLW finger food component. Snack must always be a BLW-style finger food." : weaningStage.fingerFoodsOk ? "INCLUDE at least one finger food option per day (snack is a good fit)." : "Do NOT include finger foods — this stage requires fully puréed or mashed textures only."}
 
 Generate a complete, safe, and nutritious day's meal plan with 4 meals appropriate for this exact stage.
-Write the ENTIRE meal plan in BOTH English (meals_en) AND Korean (meals_ko).
+Write the ENTIRE meal plan in ${langLabel}.
 
 Return this exact JSON structure, fully filled in:
 {
   "stage": "${weaningStage.nameEn}",
   "cuisine": "${cuisineLabel}",${parentRequest ? `
-  "overall_advice_en": "",
-  "overall_advice_ko": "",` : ""}
-  "meals_en": ${mealTemplate},
-  "meals_ko": ${mealTemplate}
+  "overall_advice": "",` : ""}
+  "meals": ${mealTemplate}
 }`;
 
-  let message;
-  try {
-    message = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 8000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: prompt }],
-    });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Claude API error";
-    return NextResponse.json({ error: msg }, { status: 502 });
-  }
+  // Increment usage count before streaming
+  supabase.from("generation_log").insert({ user_id: user.id }).then(null, console.error);
 
-  const raw = message.content[0].type === "text" ? message.content[0].text : "";
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    console.error("Claude raw response (no JSON found):", raw);
-    return NextResponse.json({ error: "Failed to parse meal plan." }, { status: 500 });
-  }
+  const remaining = isAdmin ? null : DAILY_LIMIT - (count ?? 0) - 1;
 
-  let bilingual: BilingualPlan;
-  try {
-    bilingual = JSON.parse(jsonMatch[0]);
-  } catch {
-    console.error("Claude raw response (invalid JSON):", raw);
-    return NextResponse.json({ error: "Failed to parse meal plan." }, { status: 500 });
-  }
-
-  await Promise.all([
-    supabase.from("generation_log").insert({ user_id: user.id }),
-    supabase.from("menu_history").insert({
-      user_id: user.id,
-      baby_id,
-      stage: bilingual.stage,
-      cuisine: bilingual.cuisine,
-      meals_en: bilingual.meals_en,
-      meals_ko: bilingual.meals_ko,
-    }),
-  ]);
-
-  const meals = language === "ko" ? bilingual.meals_ko : bilingual.meals_en;
-  const overall_advice = language === "ko"
-    ? bilingual.overall_advice_ko
-    : bilingual.overall_advice_en;
-
-  return NextResponse.json({
-    stage: bilingual.stage,
-    cuisine: bilingual.cuisine,
-    ...(overall_advice ? { overall_advice } : {}),
-    meals,
-    remaining: isAdmin ? null : DAILY_LIMIT - (count ?? 0) - 1,
+  const stream = client.messages.stream({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 4000,
+    system: [
+      {
+        type: "text",
+        text: systemPrompt,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: `${stageContext}\n\n${blwContext}`,
+            cache_control: { type: "ephemeral" },
+          },
+          {
+            type: "text",
+            text: dynamicPrompt,
+          },
+        ],
+      },
+    ],
   });
+
+  // After stream: save history + run allergy evaluation
+  stream.finalMessage().then((msg) => {
+    const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return;
+    try {
+      const parsed = JSON.parse(jsonMatch[0]) as ParsedPlan;
+
+      // Allergy safety evaluation — annotate the active span
+      const violations = checkAllergyViolations(parsed.meals, baby.allergies);
+      const span = trace.getActiveSpan();
+      if (span) {
+        span.setAttribute("eval.allergy_violation", violations.length > 0);
+        if (violations.length > 0) {
+          span.setAttribute("eval.violated_allergens", violations.join(", "));
+          console.error("[SAFETY] Allergy violation detected:", violations, "for user:", user.id);
+        }
+        span.setAttribute("gen.stage", weaningStage.nameEn);
+        span.setAttribute("gen.blw_type", blwType);
+        span.setAttribute("gen.has_parent_request", !!parentRequest);
+        span.setAttribute("gen.cuisine", cuisine);
+      }
+
+      supabase.from("menu_history").insert({
+        user_id: user.id,
+        baby_id,
+        stage: parsed.stage,
+        cuisine: parsed.cuisine,
+        meals_en: parsed.meals,
+        meals_ko: parsed.meals,
+      }).then(null, console.error);
+    } catch { /* silent */ }
+  }).catch(console.error);
+
+  // Capture trace ID before starting stream for client feedback linking
+  const traceId = trace.getActiveSpan()?.spanContext().traceId ?? "";
+
+  const encoder = new TextEncoder();
+
+  return new Response(
+    new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const event of stream) {
+            if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
+          }
+        } catch (err) {
+          controller.error(err);
+        } finally {
+          controller.close();
+        }
+      },
+      cancel() {
+        stream.abort();
+      },
+    }),
+    {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Accel-Buffering": "no",
+        ...(remaining !== null ? { "X-Remaining": String(remaining) } : {}),
+        ...(traceId ? { "X-Trace-Id": traceId } : {}),
+      },
+    }
+  );
 }
