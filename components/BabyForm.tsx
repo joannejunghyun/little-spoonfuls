@@ -108,9 +108,12 @@ export function BabyForm({ baby, onClose }: BabyFormProps) {
           <SelectTrigger className="rounded-2xl border-border bg-white">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="min-w-max">
             <SelectItem value="all">{t.diets.all}</SelectItem>
-            <SelectItem value="vegetarian">{t.diets.vegetarian}</SelectItem>
+            <SelectItem value="pescatarian">{t.diets.pescatarian}</SelectItem>
+            <SelectItem value="lacto-ovo">{t.diets["lacto-ovo"]}</SelectItem>
+            <SelectItem value="lacto">{t.diets.lacto}</SelectItem>
+            <SelectItem value="ovo">{t.diets.ovo}</SelectItem>
             <SelectItem value="vegan">{t.diets.vegan}</SelectItem>
           </SelectContent>
         </Select>

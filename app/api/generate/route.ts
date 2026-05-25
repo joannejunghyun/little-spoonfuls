@@ -26,6 +26,28 @@ function checkAllergyViolations(meals: MealSet, allergies: string[]): string[] {
   });
 }
 
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?(previous|prior|above|earlier)\s+(instructions?|prompts?|rules?)/i,
+  /forget\s+(all\s+)?(previous|prior|above|earlier|everything)/i,
+  /you\s+are\s+now\s+/i,
+  /act\s+as\s+(if\s+)?(you\s+are\s+)?a?\s*(?!nutritionist|chef|baby)/i,
+  /system\s*prompt/i,
+  /\bdo\s+not\s+(follow|obey|comply)/i,
+  /disregard\s+(all\s+)?(previous|prior|above|earlier)/i,
+];
+
+function sanitizeParentRequest(raw: string): string {
+  const trimmed = raw
+    .slice(0, 300)
+    .replace(/[\x00-\x1F\x7F]/g, " ")   // strip control chars
+    .replace(/[`<>]/g, "")               // strip chars used to escape prompt context
+    .replace(/"{2,}/g, '"')              // collapse repeated quotes
+    .trim();
+
+  if (INJECTION_PATTERNS.some((re) => re.test(trimmed))) return "";
+  return trimmed;
+}
+
 const client = new Anthropic();
 const DAILY_LIMIT = 3;
 
@@ -91,7 +113,7 @@ export async function POST(req: NextRequest) {
 
   const { baby_id, cuisine, blw_type, parent_request } = await req.json();
   const blwType: BlwType = ["blw", "no-blw", "mix"].includes(blw_type) ? blw_type : "no-blw";
-  const parentRequest: string = typeof parent_request === "string" ? parent_request.slice(0, 300) : "";
+  const parentRequest: string = typeof parent_request === "string" ? sanitizeParentRequest(parent_request) : "";
   const language: "en" | "ko" = detectLang(user.user_metadata?.language, req.headers.get("accept-language"));
 
   const [{ data: baby, error: babyError }, { data: todayHistory }] = await Promise.all([
@@ -170,10 +192,20 @@ EXPERT NOTE REQUIREMENT: For each meal, fill expert_note with 1 sentence in ${la
   const systemPrompt = `You are a certified baby nutritionist specializing in infant weaning (이유식). You respond ONLY with valid JSON — no markdown fences, no preamble, no explanation. Your response must start with { and end with }. Never truncate — output the complete JSON.
 IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breast milk or formula" / "모유 또는 분유" — not all parents breastfeed.`;
 
+  const DIET_LABELS: Record<string, string> = {
+    all: "Omnivore (meat, fish, dairy, eggs all OK — no restrictions)",
+    pescatarian: "Pescatarian (no meat — fish, dairy, and eggs OK)",
+    "lacto-ovo": "Lacto-ovo vegetarian (no meat/fish — dairy and eggs OK)",
+    lacto: "Lacto vegetarian (no meat/fish/eggs — dairy OK)",
+    ovo: "Ovo vegetarian (no meat/fish/dairy — eggs OK)",
+    vegan: "Vegan (no animal products at all)",
+  };
+  const dietLabel = DIET_LABELS[baby.diet_type] ?? DIET_LABELS.all;
+
   const dynamicPrompt = `Baby details:
 - Name: ${baby.name}
 - Age: ${days} days (approximately ${months} months)
-- Diet type: ${baby.diet_type === "all" ? "Omnivore (meat, fish, dairy, eggs OK)" : baby.diet_type === "vegetarian" ? "Vegetarian (no meat/fish, dairy/eggs OK)" : "Vegan (no animal products)"}
+- Diet type: ${dietLabel}
 - Cuisine style: ${cuisineLabel}
 - ${allergyNote}${dedupRule}
 ${requestContext ? `\n${requestContext}\n` : ""}

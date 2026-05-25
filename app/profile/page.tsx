@@ -7,6 +7,7 @@ import { translations, type Lang } from "@/lib/i18n/translations";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { detectLang } from "@/lib/get-lang";
+import { UserMenu } from "@/components/UserMenu";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -26,13 +27,16 @@ export default async function ProfilePage() {
     <LanguageProvider lang={lang}>
       <main className="flex flex-col items-center px-5 py-8 pb-16">
         <div className="w-full max-w-md">
-          <div className="flex items-center gap-3 mb-8">
-            <Link href="/">
-              <Button variant="outline" size="sm" className="rounded-full border-border">
-                {t.back}
-              </Button>
-            </Link>
-            <h1 className="text-xl font-bold text-primary">{t.babyProfiles}</h1>
+          <div className="flex flex-col gap-3 mb-8">
+            <div className="flex items-center gap-3">
+              <Link href="/">
+                <Button variant="outline" size="sm" className="rounded-full border-border">
+                  {t.back}
+                </Button>
+              </Link>
+              <h1 className="text-xl font-bold text-primary">{t.babyProfiles}</h1>
+            </div>
+            <UserMenu email={user.email ?? ""} />
           </div>
           <ProfileClient babies={babies ?? []} language={lang} />
         </div>

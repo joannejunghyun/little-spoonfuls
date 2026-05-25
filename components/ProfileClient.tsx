@@ -135,7 +135,11 @@ export function ProfileClient({ babies, language: initialLanguage }: { babies: B
             <p className="text-sm font-semibold text-foreground mb-4">
               {babies.length === 0 ? t.addFirstBaby : t.addAnotherBaby}
             </p>
-            <BabyForm onClose={() => setShowAddForm(false)} />
+            <BabyForm
+              onClose={babies.length === 0
+                ? () => router.push("/")
+                : () => setShowAddForm(false)}
+            />
           </CardContent>
         </Card>
       ) : (
