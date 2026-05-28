@@ -134,6 +134,22 @@ export const translations = {
       Shellfish: "Shellfish",
     },
 
+    // Landing (public home)
+    landing: {
+      badge: "Baby meal planning made simpler",
+      hero: "Personalized baby meal plans for busy families.",
+      signIn: "Sign in",
+      feature1Title: "Child profiles",
+      feature1Text: "Store diet stage and allergy notes for safer suggestions.",
+      feature2Title: "Meal planning",
+      feature2Text: "Generate practical meal ideas and save recipes you like.",
+      feature3Title: "Private by design",
+      feature3Text: "Your account data is used only to run your meal planner.",
+      loginTitle: "Create your account",
+      loginSubtitle: "Use Google sign-in or a magic link to get started.",
+      footer: "Little Spoonfuls provides meal planning support and does not replace medical advice.",
+    },
+
     // Vote
     voteTitle: "Want unlimited meal plans?",
     voteDesc: "$4.99/mo for unlimited daily suggestions. Vote to let us know you're interested — early voters get a launch discount!",
@@ -294,6 +310,22 @@ export const translations = {
       Soy: "대두",
       Fish: "생선",
       Shellfish: "갑각류",
+    },
+
+    // Landing (public home)
+    landing: {
+      badge: "이유식 준비, 더 쉽게",
+      hero: "바쁜 가정을 위한 맞춤 이유식 플랜.",
+      signIn: "로그인",
+      feature1Title: "아기 프로필",
+      feature1Text: "이유식 단계와 알레르기를 저장해 더 안전한 메뉴를 받아요.",
+      feature2Title: "식단 계획",
+      feature2Text: "실용적인 메뉴 아이디어를 생성하고 마음에 드는 레시피를 저장해요.",
+      feature3Title: "개인정보 보호",
+      feature3Text: "계정 정보는 식단 추천에만 사용됩니다.",
+      loginTitle: "계정 만들기",
+      loginSubtitle: "Google 로그인 또는 매직 링크로 간편하게 시작하세요.",
+      footer: "Little Spoonfuls는 식단 계획 도우미이며 의료 조언을 대체하지 않습니다.",
     },
 
     // Vote
