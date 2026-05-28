@@ -18,21 +18,74 @@ const ALLERGEN_KEYWORDS: Record<string, string[]> = {
   Shellfish: ["shrimp", "crab", "lobster", "prawn", "새우", "게", "조개"],
 };
 
+const DIET_RESTRICTIONS: Record<string, Array<{ label: string; keywords: string[] }>> = {
+  all: [],
+  pescatarian: [
+    { label: "meat", keywords: ["meat", "beef", "chicken", "pork", "lamb", "turkey", "ham", "bacon", "sausage", "소고기", "쇠고기", "닭고기", "돼지고기", "고기", "햄", "베이컨", "소시지"] },
+  ],
+  "lacto-ovo": [
+    { label: "meat", keywords: ["meat", "beef", "chicken", "pork", "lamb", "turkey", "ham", "bacon", "sausage", "소고기", "쇠고기", "닭고기", "돼지고기", "고기", "햄", "베이컨", "소시지"] },
+    { label: "fish", keywords: ["fish", "salmon", "tuna", "cod", "shrimp", "crab", "lobster", "prawn", "shellfish", "생선", "연어", "참치", "대구", "새우", "게", "조개"] },
+  ],
+  lacto: [
+    { label: "meat", keywords: ["meat", "beef", "chicken", "pork", "lamb", "turkey", "ham", "bacon", "sausage", "소고기", "쇠고기", "닭고기", "돼지고기", "고기", "햄", "베이컨", "소시지"] },
+    { label: "fish", keywords: ["fish", "salmon", "tuna", "cod", "shrimp", "crab", "lobster", "prawn", "shellfish", "생선", "연어", "참치", "대구", "새우", "게", "조개"] },
+    { label: "egg", keywords: ["egg", "eggs", "yolk", "달걀", "계란"] },
+  ],
+  ovo: [
+    { label: "meat", keywords: ["meat", "beef", "chicken", "pork", "lamb", "turkey", "ham", "bacon", "sausage", "소고기", "쇠고기", "닭고기", "돼지고기", "고기", "햄", "베이컨", "소시지"] },
+    { label: "fish", keywords: ["fish", "salmon", "tuna", "cod", "shrimp", "crab", "lobster", "prawn", "shellfish", "생선", "연어", "참치", "대구", "새우", "게", "조개"] },
+    { label: "dairy", keywords: ["dairy", "milk", "cheese", "butter", "yogurt", "cream", "유제품", "치즈", "버터", "요거트", "우유"] },
+  ],
+  vegan: [
+    { label: "meat", keywords: ["meat", "beef", "chicken", "pork", "lamb", "turkey", "ham", "bacon", "sausage", "소고기", "쇠고기", "닭고기", "돼지고기", "고기", "햄", "베이컨", "소시지"] },
+    { label: "fish", keywords: ["fish", "salmon", "tuna", "cod", "shrimp", "crab", "lobster", "prawn", "shellfish", "생선", "연어", "참치", "대구", "새우", "게", "조개"] },
+    { label: "egg", keywords: ["egg", "eggs", "yolk", "달걀", "계란"] },
+    { label: "dairy", keywords: ["dairy", "milk", "cheese", "butter", "yogurt", "cream", "유제품", "치즈", "버터", "요거트", "우유"] },
+    { label: "honey", keywords: ["honey", "꿀"] },
+  ],
+};
+
+function containsKeyword(text: string, keyword: string): boolean {
+  const normalized = text.toLowerCase();
+  const kw = keyword.toLowerCase();
+  if (/^[a-z0-9 ]+$/.test(kw)) {
+    const pattern = kw
+      .trim()
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/\s+/g, "\\s+");
+    return new RegExp(`(^|[^a-z0-9])${pattern}([^a-z0-9]|$)`).test(normalized);
+  }
+  return normalized.includes(kw);
+}
+
+function findDietViolations(text: string, dietType: string): string[] {
+  if (!text) return [];
+  const restrictions = DIET_RESTRICTIONS[dietType] ?? [];
+  const violations = new Set<string>();
+
+  for (const restriction of restrictions) {
+    const matched = restriction.keywords.find((keyword) => containsKeyword(text, keyword));
+    if (matched) violations.add(`${restriction.label}:${matched}`);
+  }
+
+  return [...violations];
+}
+
 function checkAllergyViolations(meals: MealSet, allergies: string[]): string[] {
   if (allergies.length === 0) return [];
-  const text = JSON.stringify(meals).toLowerCase();
+  const text = JSON.stringify(meals);
   return allergies.filter((allergen) => {
     const keywords = ALLERGEN_KEYWORDS[allergen] ?? [allergen.toLowerCase()];
-    return keywords.some((kw) => text.includes(kw));
+    return keywords.some((kw) => containsKeyword(text, kw));
   });
 }
 
 function findRequestedAllergens(text: string, allergies: string[]): string[] {
   if (!text || allergies.length === 0) return [];
-  const normalized = text.toLowerCase();
   return allergies.filter((allergen) => {
     const keywords = ALLERGEN_KEYWORDS[allergen] ?? [allergen.toLowerCase()];
-    return keywords.some((kw) => normalized.includes(kw.toLowerCase()));
+    return keywords.some((kw) => containsKeyword(text, kw));
   });
 }
 
@@ -182,6 +235,20 @@ async function handleGenerate(req: NextRequest) {
     const msg = language === "ko"
       ? `${baby.name}의 알레르기(${requestedAllergens.join(", ")})가 포함된 요청이라 메뉴를 만들 수 없어요. 해당 재료를 제외하고 다시 요청해 주세요.`
       : `I can't create a meal plan with ${requestedAllergens.join(", ")} because it conflicts with ${baby.name}'s allergy profile. Please ask again without that ingredient.`;
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
+  const requestedDietViolations = findDietViolations(parentRequest, baby.diet_type);
+  if (requestedDietViolations.length > 0) {
+    const span = trace.getActiveSpan();
+    span?.setAttribute("eval.safety_passed", false);
+    span?.setAttribute("eval.blocked_response", true);
+    span?.setAttribute("eval.block_reason", "diet_requested");
+    span?.setAttribute("eval.diet_violation", true);
+    span?.setAttribute("eval.violated_diet_items", requestedDietViolations.join(", "));
+
+    const msg = language === "ko"
+      ? `${baby.name}의 식단 설정(${baby.diet_type})과 맞지 않는 재료가 포함된 요청이라 메뉴를 만들 수 없어요. 해당 재료를 제외하고 다시 요청해 주세요.`
+      : `I can't create a meal plan with that ingredient because it conflicts with ${baby.name}'s ${baby.diet_type} diet setting. Please ask again without it.`;
     return NextResponse.json({ error: msg }, { status: 400 });
   }
   const allergyNote = allergies.length > 0
@@ -362,12 +429,19 @@ Return this exact JSON structure, fully filled in:
 
       // Allergy safety evaluation — annotate the active span
       const violations = checkAllergyViolations(parsed.meals, baby.allergies ?? []);
+      const dietViolations = findDietViolations(JSON.stringify(parsed.meals), baby.diet_type);
       const span = generationSpan ?? trace.getActiveSpan();
       if (span) {
+        span.setAttribute("eval.safety_passed", violations.length === 0 && dietViolations.length === 0);
         span.setAttribute("eval.allergy_violation", violations.length > 0);
         if (violations.length > 0) {
           span.setAttribute("eval.violated_allergens", violations.join(", "));
           console.error("[SAFETY] Allergy violation detected:", violations, "for user:", user.id);
+        }
+        span.setAttribute("eval.diet_violation", dietViolations.length > 0);
+        if (dietViolations.length > 0) {
+          span.setAttribute("eval.violated_diet_items", dietViolations.join(", "));
+          console.error("[SAFETY] Diet violation detected:", dietViolations, "for user:", user.id);
         }
       }
 
