@@ -41,9 +41,19 @@ Meal recommendations are generated against a curated knowledge base drawn from 8
 | **Recipe Book for Babies Who Need to Make the Most of Every Mouthful** — Dr. Luise Marino | High-density nutrition strategies |
 | **Introducing Solid Foods and Early Years Recipe Booklet** | NHS-aligned UK weaning guidelines |
 
-### Request-Specific RAG Grounding
+### RAG: Request-Specific Grounding
 
-In addition to static stage and BLW rules, the generation API retrieves request-specific reference passages before calling the LLM. The current local RAG layer covers:
+Little Spoonfuls uses a local RAG layer before meal generation. In addition to static stage and BLW rules, the generation API retrieves request-specific reference passages before calling the LLM.
+
+Current RAG flow:
+
+1. Build a retrieval query from the baby's stage, language, cuisine, BLW mode, diet type, allergies, and parent request
+2. Retrieve matching passages from `lib/rag/documents.ts`
+3. Format the selected passages with source, title, matched tags, and content
+4. Inject them into the Claude prompt as `RETRIEVED EXPERT REFERENCES`
+5. Record retrieval metadata in Phoenix as `rag.*` span attributes
+
+The current local RAG knowledge base covers:
 
 - constipation and fiber-rich ingredient strategies
 - iron support with vitamin-C pairing
@@ -54,11 +64,21 @@ In addition to static stage and BLW rules, the generation API retrieves request-
 
 Retrieved passages are injected into the Claude prompt as `RETRIEVED EXPERT REFERENCES`, while non-negotiable safety rules such as allergies, choking hazards, diet type, and stage texture always take priority.
 
-### Safety Guardrails
+### Evals and Safety Guardrails
 
 Little Spoonfuls blocks allergy-conflicting parent requests before the LLM is called. For example, if a baby has an egg allergy and a parent asks for an egg-based menu, the API returns a safety error instead of generating a plan.
 
 The prompts also avoid using breast milk or formula as recipe ingredients or mixing liquids. If liquid is needed, recipes should use water, cooking water, unsalted vegetable stock, or fruit/vegetable purée instead.
+
+Current eval signals:
+
+- `eval.safety_passed` — whether the request passed safety checks
+- `eval.blocked_response` — whether the API blocked a response before calling the LLM
+- `eval.block_reason` — why a response was blocked, such as `allergy_requested`
+- `eval.violated_allergens` — which allergy profile entries were involved
+- `eval.allergy_violation` — whether generated meals contained allergy keywords during post-generation checking
+
+These evals are code-based today. They are designed to support future LLM-as-judge or regression evals for groundedness, safety, and menu diversity.
 
 ### LLM Observability (Arize Phoenix)
 
@@ -67,6 +87,7 @@ Every generation is traced end-to-end via OpenTelemetry + Arize Phoenix:
 - **Allergy safety monitoring** — violations are logged as span attributes in real time
 - **RAG traceability** — retrieved document IDs, matched tags, source names, match counts, and top scores are recorded as `rag.*` span attributes
 - **Blocked safety events** — allergy-conflicting requests are recorded with `eval.blocked_response`, `eval.block_reason`, and `eval.violated_allergens`
+- **Eval-ready traces** — RAG context, generation inputs, safety blocks, and human saves live on the same trace so quality can be compared across segments
 - **Human feedback signal** — each ❤️ save annotates the originating trace as a HUMAN quality signal, building a labeled dataset of what parents actually found useful
 - Traces are queryable by stage, cuisine, BLW type, and special request, making it possible to spot systematic prompt issues across segments
 
@@ -145,9 +166,19 @@ Made with ❤️ by [Joanne](https://www.linkedin.com/in/junghyunhao/) — for D
 | **Recipe Book for Babies Who Need to Make the Most of Every Mouthful** — Dr. Luise Marino | 고영양 밀도 레시피 전략 |
 | **Introducing Solid Foods and Early Years Recipe Booklet** | NHS 기반 영국 이유식 가이드라인 |
 
-### 요청별 RAG 기반 생성
+### RAG: 요청별 근거 검색
 
-고정된 이유식 단계·BLW 규칙에 더해, 생성 API는 LLM을 호출하기 전에 요청과 관련된 참고 문단을 찾아 프롬프트에 넣어요. 현재 로컬 RAG 레이어는 다음 내용을 다룹니다:
+Little Spoonfuls는 메뉴 생성 전에 로컬 RAG 레이어를 실행합니다. 고정된 이유식 단계·BLW 규칙에 더해, 생성 API는 LLM을 호출하기 전에 요청과 관련된 참고 문단을 찾아 프롬프트에 넣어요.
+
+현재 RAG 흐름:
+
+1. 아기의 단계, 언어, 요리 스타일, BLW 모드, 식단 타입, 알레르기, 부모 요청으로 검색 쿼리 생성
+2. `lib/rag/documents.ts`에서 관련 문단 검색
+3. 선택된 문단을 출처, 제목, 매칭 태그, 본문과 함께 포맷팅
+4. Claude 프롬프트의 `RETRIEVED EXPERT REFERENCES`로 삽입
+5. Phoenix에 `rag.*` 스팬 속성으로 검색 메타데이터 기록
+
+현재 로컬 RAG 지식 베이스는 다음 내용을 다룹니다:
 
 - 변비와 섬유질 식재료 전략
 - 철분 보충과 비타민 C 조합
@@ -158,11 +189,21 @@ Made with ❤️ by [Joanne](https://www.linkedin.com/in/junghyunhao/) — for D
 
 검색된 문단은 Claude 프롬프트의 `RETRIEVED EXPERT REFERENCES`로 들어가고, 알레르기·질식 위험·식단 타입·월령별 질감 같은 안전 규칙은 항상 우선 적용됩니다.
 
-### 안전 가드레일
+### Evals와 안전 가드레일
 
 Little Spoonfuls는 아기 알레르기와 충돌하는 부모 요청을 LLM 호출 전에 차단합니다. 예를 들어 계란 알레르기가 있는 아기에게 계란 메뉴를 요청하면, 메뉴를 생성하지 않고 안전 안내를 반환합니다.
 
 또한 프롬프트는 모유나 분유를 레시피 재료나 농도 조절용 액체로 사용하지 않도록 제한합니다. 액체가 필요할 때는 물, 삶은 물, 무염 채수, 채소/과일 퓨레를 사용하도록 안내합니다.
+
+현재 eval 신호:
+
+- `eval.safety_passed` — 요청이 안전 검사를 통과했는지
+- `eval.blocked_response` — LLM 호출 전에 API가 응답을 차단했는지
+- `eval.block_reason` — `allergy_requested`처럼 차단된 이유
+- `eval.violated_allergens` — 충돌한 알레르기 항목
+- `eval.allergy_violation` — 생성된 식단에 알레르기 키워드가 포함됐는지 사후 검사한 결과
+
+현재 eval은 코드 기반입니다. 이후 groundedness, safety, menu diversity를 평가하는 LLM-as-judge 또는 회귀 평가로 확장할 수 있도록 설계되어 있습니다.
 
 ### LLM 관찰성 (Arize Phoenix)
 
@@ -171,6 +212,7 @@ Little Spoonfuls는 아기 알레르기와 충돌하는 부모 요청을 LLM 호
 - **알레르기 안전 모니터링** — 위반 감지 시 실시간으로 스팬 속성에 기록
 - **RAG 추적성** — 검색된 문서 ID, 매칭 태그, 출처, 검색 개수, 최고 점수를 `rag.*` 스팬 속성으로 기록
 - **차단된 안전 이벤트** — 알레르기와 충돌하는 요청은 `eval.blocked_response`, `eval.block_reason`, `eval.violated_allergens`로 기록
+- **Eval-ready trace** — RAG 컨텍스트, 생성 입력, 안전 차단, 사람 저장 피드백이 같은 트레이스에 남아 세그먼트별 품질 비교 가능
 - **사람 피드백 신호** — ❤️ 저장 시 해당 트레이스에 HUMAN 품질 신호가 어노테이션됨 → 실제로 유용했던 메뉴의 레이블 데이터셋 축적
 - 단계·요리 스타일·BLW 타입·특별 요청별로 트레이스를 조회할 수 있어, 프롬프트의 구조적 문제를 세그먼트별로 파악 가능
 
