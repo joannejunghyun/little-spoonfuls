@@ -19,6 +19,8 @@ Generates a full day's meal plan (breakfast, lunch, snack, dinner) tailored to y
 - Multi-baby profiles with per-profile allergy and diet settings
 - Full English / Korean bilingual support — language switch updates the entire UI instantly
 - Meal history saved automatically
+- Request-specific RAG grounding for concerns like constipation, iron support, sleep, immunity, BLW safety, and Korean stage-appropriate meal patterns
+- Allergy-aware safety guardrails that block requests for ingredients already marked as unsafe for the baby
 
 ---
 
@@ -39,11 +41,32 @@ Meal recommendations are generated against a curated knowledge base drawn from 8
 | **Recipe Book for Babies Who Need to Make the Most of Every Mouthful** — Dr. Luise Marino | High-density nutrition strategies |
 | **Introducing Solid Foods and Early Years Recipe Booklet** | NHS-aligned UK weaning guidelines |
 
+### Request-Specific RAG Grounding
+
+In addition to static stage and BLW rules, the generation API retrieves request-specific reference passages before calling the LLM. The current local RAG layer covers:
+
+- constipation and fiber-rich ingredient strategies
+- iron support with vitamin-C pairing
+- cold/immunity and gentle warm-meal guidance
+- sleep-friendly evening meal patterns
+- BLW choking-shape reminders
+- Korean middle-stage texture and menu examples
+
+Retrieved passages are injected into the Claude prompt as `RETRIEVED EXPERT REFERENCES`, while non-negotiable safety rules such as allergies, choking hazards, diet type, and stage texture always take priority.
+
+### Safety Guardrails
+
+Little Spoonfuls blocks allergy-conflicting parent requests before the LLM is called. For example, if a baby has an egg allergy and a parent asks for an egg-based menu, the API returns a safety error instead of generating a plan.
+
+The prompts also avoid using breast milk or formula as recipe ingredients or mixing liquids. If liquid is needed, recipes should use water, cooking water, unsalted vegetable stock, or fruit/vegetable purée instead.
+
 ### LLM Observability (Arize Phoenix)
 
 Every generation is traced end-to-end via OpenTelemetry + Arize Phoenix:
 
 - **Allergy safety monitoring** — violations are logged as span attributes in real time
+- **RAG traceability** — retrieved document IDs, matched tags, source names, match counts, and top scores are recorded as `rag.*` span attributes
+- **Blocked safety events** — allergy-conflicting requests are recorded with `eval.blocked_response`, `eval.block_reason`, and `eval.violated_allergens`
 - **Human feedback signal** — each ❤️ save annotates the originating trace as a HUMAN quality signal, building a labeled dataset of what parents actually found useful
 - Traces are queryable by stage, cuisine, BLW type, and special request, making it possible to spot systematic prompt issues across segments
 
@@ -100,6 +123,8 @@ Made with ❤️ by [Joanne](https://www.linkedin.com/in/junghyunhao/) — for D
 - 알레르기·식단 타입이 개별 설정되는 멀티 아기 프로필
 - 한국어/영어 완전 지원 — 언어 전환 시 앱 전체 UI 즉시 변경
 - 추천 이력 자동 저장
+- 변비, 철분 보충, 수면, 면역, BLW 안전, 한식 단계별 질감처럼 요청별로 관련 자료를 찾아 넣는 RAG 기반 생성
+- 아기 프로필의 알레르기와 충돌하는 식재료 요청은 LLM 호출 전에 차단
 
 ---
 
@@ -120,11 +145,32 @@ Made with ❤️ by [Joanne](https://www.linkedin.com/in/junghyunhao/) — for D
 | **Recipe Book for Babies Who Need to Make the Most of Every Mouthful** — Dr. Luise Marino | 고영양 밀도 레시피 전략 |
 | **Introducing Solid Foods and Early Years Recipe Booklet** | NHS 기반 영국 이유식 가이드라인 |
 
+### 요청별 RAG 기반 생성
+
+고정된 이유식 단계·BLW 규칙에 더해, 생성 API는 LLM을 호출하기 전에 요청과 관련된 참고 문단을 찾아 프롬프트에 넣어요. 현재 로컬 RAG 레이어는 다음 내용을 다룹니다:
+
+- 변비와 섬유질 식재료 전략
+- 철분 보충과 비타민 C 조합
+- 감기/면역 요청을 위한 따뜻하고 부드러운 식단 방향
+- 수면을 고려한 저녁 메뉴 패턴
+- BLW 질식 위험 형태 조정
+- 한식 중기 이유식 질감과 메뉴 예시
+
+검색된 문단은 Claude 프롬프트의 `RETRIEVED EXPERT REFERENCES`로 들어가고, 알레르기·질식 위험·식단 타입·월령별 질감 같은 안전 규칙은 항상 우선 적용됩니다.
+
+### 안전 가드레일
+
+Little Spoonfuls는 아기 알레르기와 충돌하는 부모 요청을 LLM 호출 전에 차단합니다. 예를 들어 계란 알레르기가 있는 아기에게 계란 메뉴를 요청하면, 메뉴를 생성하지 않고 안전 안내를 반환합니다.
+
+또한 프롬프트는 모유나 분유를 레시피 재료나 농도 조절용 액체로 사용하지 않도록 제한합니다. 액체가 필요할 때는 물, 삶은 물, 무염 채수, 채소/과일 퓨레를 사용하도록 안내합니다.
+
 ### LLM 관찰성 (Arize Phoenix)
 
 모든 생성 요청은 OpenTelemetry + Arize Phoenix로 전 구간 추적돼요:
 
 - **알레르기 안전 모니터링** — 위반 감지 시 실시간으로 스팬 속성에 기록
+- **RAG 추적성** — 검색된 문서 ID, 매칭 태그, 출처, 검색 개수, 최고 점수를 `rag.*` 스팬 속성으로 기록
+- **차단된 안전 이벤트** — 알레르기와 충돌하는 요청은 `eval.blocked_response`, `eval.block_reason`, `eval.violated_allergens`로 기록
 - **사람 피드백 신호** — ❤️ 저장 시 해당 트레이스에 HUMAN 품질 신호가 어노테이션됨 → 실제로 유용했던 메뉴의 레이블 데이터셋 축적
 - 단계·요리 스타일·BLW 타입·특별 요청별로 트레이스를 조회할 수 있어, 프롬프트의 구조적 문제를 세그먼트별로 파악 가능
 
