@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWeaningStage, buildStageContext } from "@/lib/weaning-context";
 import { buildBlwContext, type BlwType } from "@/lib/blw-context";
 import { detectLang } from "@/lib/get-lang";
+import { formatRetrievedContext, retrieveMealKnowledge } from "@/lib/rag/retrieve";
 
 const ALLERGEN_KEYWORDS: Record<string, string[]> = {
   Egg: ["egg", "eggs", "yolk", "달걀", "계란"],
@@ -23,6 +24,15 @@ function checkAllergyViolations(meals: MealSet, allergies: string[]): string[] {
   return allergies.filter((allergen) => {
     const keywords = ALLERGEN_KEYWORDS[allergen] ?? [allergen.toLowerCase()];
     return keywords.some((kw) => text.includes(kw));
+  });
+}
+
+function findRequestedAllergens(text: string, allergies: string[]): string[] {
+  if (!text || allergies.length === 0) return [];
+  const normalized = text.toLowerCase();
+  return allergies.filter((allergen) => {
+    const keywords = ALLERGEN_KEYWORDS[allergen] ?? [allergen.toLowerCase()];
+    return keywords.some((kw) => normalized.includes(kw.toLowerCase()));
   });
 }
 
@@ -161,8 +171,21 @@ async function handleGenerate(req: NextRequest) {
   const weaningStage = getWeaningStage(days);
   const months = Math.floor(days / 30);
   const allergies = baby.allergies ?? [];
+  const requestedAllergens = findRequestedAllergens(parentRequest, allergies);
+  if (requestedAllergens.length > 0) {
+    const span = trace.getActiveSpan();
+    span?.setAttribute("eval.safety_passed", false);
+    span?.setAttribute("eval.blocked_response", true);
+    span?.setAttribute("eval.block_reason", "allergy_requested");
+    span?.setAttribute("eval.violated_allergens", requestedAllergens.join(", "));
+
+    const msg = language === "ko"
+      ? `${baby.name}의 알레르기(${requestedAllergens.join(", ")})가 포함된 요청이라 메뉴를 만들 수 없어요. 해당 재료를 제외하고 다시 요청해 주세요.`
+      : `I can't create a meal plan with ${requestedAllergens.join(", ")} because it conflicts with ${baby.name}'s allergy profile. Please ask again without that ingredient.`;
+    return NextResponse.json({ error: msg }, { status: 400 });
+  }
   const allergyNote = allergies.length > 0
-    ? `STRICT ALLERGIES TO AVOID: ${allergies.join(", ")}.`
+    ? `STRICT ALLERGIES TO AVOID: ${allergies.join(", ")}. Never include these ingredients or close synonyms, even if the parent asks for them.`
     : "No known allergies.";
   const CUISINE_LABELS: Record<string, string> = {
     mix: "a global mix (Korean, Western, or Chinese)",
@@ -215,7 +238,9 @@ EXPERT NOTE REQUIREMENT: For each meal, fill expert_note with 1 sentence in ${la
     : "";
 
   const systemPrompt = `You are a certified baby nutritionist specializing in infant weaning (이유식). You respond ONLY with valid JSON — no markdown fences, no preamble, no explanation. Your response must start with { and end with }. Never truncate — output the complete JSON.
-IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breast milk or formula" / "모유 또는 분유" — not all parents breastfeed.`;
+IMPORTANT RULES:
+- Do not use breast milk, formula, 모유, or 분유 as recipe ingredients, mixing liquids, prep steps, or texture-adjustment instructions.
+- If feeding milk must be mentioned, only say breast milk or formula remains separate primary nutrition where appropriate. Never write "breast milk" or "모유" alone.`;
 
   const DIET_LABELS: Record<string, string> = {
     all: "Omnivore (meat, fish, dairy, eggs all OK — no restrictions)",
@@ -226,6 +251,37 @@ IMPORTANT RULE: Never write "breast milk" or "모유" alone. Always write "breas
     vegan: "Vegan (no animal products at all)",
   };
   const dietLabel = DIET_LABELS[baby.diet_type] ?? DIET_LABELS.all;
+  const retrievalQuery = [
+    parentRequest,
+    cuisineLabel,
+    dietLabel,
+    weaningStage.nameEn,
+    weaningStage.nameKo,
+    blwType,
+    allergies.join(", "),
+  ].filter(Boolean).join("\n");
+  const retrievedDocs = retrieveMealKnowledge({
+    query: retrievalQuery,
+    stage: weaningStage.id,
+    language,
+    cuisine,
+    blwType,
+    matchCount: 5,
+  });
+  const retrievedContext = formatRetrievedContext(retrievedDocs);
+  const generationSpan = trace.getActiveSpan();
+  if (generationSpan) {
+    generationSpan.setAttribute("gen.stage", weaningStage.nameEn);
+    generationSpan.setAttribute("gen.blw_type", blwType);
+    generationSpan.setAttribute("gen.has_parent_request", !!parentRequest);
+    generationSpan.setAttribute("gen.cuisine", cuisine);
+    generationSpan.setAttribute("rag.enabled", true);
+    generationSpan.setAttribute("rag.match_count", retrievedDocs.length);
+    generationSpan.setAttribute("rag.doc_ids", retrievedDocs.map((doc) => doc.id).join(", "));
+    generationSpan.setAttribute("rag.sources", [...new Set(retrievedDocs.map((doc) => doc.source))].join(", "));
+    generationSpan.setAttribute("rag.top_score", retrievedDocs[0]?.score ?? 0);
+    generationSpan.setAttribute("rag.matched_tags", [...new Set(retrievedDocs.flatMap((doc) => doc.matchedTags))].join(", "));
+  }
 
   const dynamicPrompt = `Baby details:
 - Name: ${baby.name}
@@ -239,6 +295,13 @@ MANDATORY NUTRITION RULES (follow strictly):
 2. Vary the vegetables across all four meals — do not repeat the same vegetable in more than one meal.
 3. Prioritize whole, nutrient-dense, colorful produce appropriate for the baby's stage and texture.
 4. ${blwType === "blw" ? "ALL meals must be BLW finger-food format — no spoon-fed purées. See feeding approach section above." : blwType === "mix" ? "At least 2 of 4 meals must have a BLW finger food component. Snack must always be a BLW-style finger food." : weaningStage.fingerFoodsOk ? "INCLUDE at least one finger food option per day (snack is a good fit)." : "Do NOT include finger foods — this stage requires fully puréed or mashed textures only."}
+5. Allergy, diet, choking, and stage-texture rules override the parent's request. If the parent requests a forbidden ingredient, omit it and choose a safe substitute.
+6. Do NOT use breast milk, formula, 모유, or 분유 in any ingredient list, prep text, nutrition text, expert note, or texture-adjustment instruction. Use water, cooking water, unsalted vegetable stock, or fruit/vegetable puree where liquid is needed.
+
+RAG GROUNDING RULES:
+- Use the retrieved expert references as request-specific grounding.
+- If retrieved references conflict with allergy, choking, stage texture, or diet rules, the safety and profile rules win.
+- Do not invent medical claims beyond the retrieved references and static safety rules.
 
 Generate a complete, safe, and nutritious day's meal plan with 4 meals appropriate for this exact stage.
 Write the ENTIRE meal plan in ${langLabel}.
@@ -277,6 +340,11 @@ Return this exact JSON structure, fully filled in:
           },
           {
             type: "text",
+            text: `RETRIEVED EXPERT REFERENCES:\n${retrievedContext}`,
+            cache_control: { type: "ephemeral" },
+          },
+          {
+            type: "text",
             text: dynamicPrompt,
           },
         ],
@@ -294,17 +362,13 @@ Return this exact JSON structure, fully filled in:
 
       // Allergy safety evaluation — annotate the active span
       const violations = checkAllergyViolations(parsed.meals, baby.allergies ?? []);
-      const span = trace.getActiveSpan();
+      const span = generationSpan ?? trace.getActiveSpan();
       if (span) {
         span.setAttribute("eval.allergy_violation", violations.length > 0);
         if (violations.length > 0) {
           span.setAttribute("eval.violated_allergens", violations.join(", "));
           console.error("[SAFETY] Allergy violation detected:", violations, "for user:", user.id);
         }
-        span.setAttribute("gen.stage", weaningStage.nameEn);
-        span.setAttribute("gen.blw_type", blwType);
-        span.setAttribute("gen.has_parent_request", !!parentRequest);
-        span.setAttribute("gen.cuisine", cuisine);
       }
 
       supabase.from("menu_history").insert({
