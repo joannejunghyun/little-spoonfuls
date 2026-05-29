@@ -55,7 +55,7 @@ export default async function LoginPage() {
         </div>
 
         {/* Login form */}
-        <LoginForm />
+        <LoginForm lang={lang} />
 
         <footer className="mt-6 text-center">
           <LegalFooter />

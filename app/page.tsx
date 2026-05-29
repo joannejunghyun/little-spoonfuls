@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import type { ComponentType } from "react";
@@ -87,17 +86,9 @@ async function PublicHome() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-background via-muted/30 to-secondary/10">
       <div className="mx-auto w-full max-w-5xl px-5 pb-12 pt-6 sm:pt-10">
-        <header className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🥄</span>
-            <span className="text-base font-bold text-primary">Little Spoonfuls</span>
-          </div>
-          <Link
-            href="/login"
-            className="rounded-full border border-primary/30 bg-white px-4 py-2 text-sm font-semibold text-primary shadow-sm shadow-primary/10 transition hover:bg-primary/5"
-          >
-            {t.signIn}
-          </Link>
+        <header className="flex items-center gap-2">
+          <span className="text-xl">🥄</span>
+          <span className="text-base font-bold text-primary">Little Spoonfuls</span>
         </header>
 
         <section className="mt-10 grid gap-10 lg:grid-cols-[1fr_400px] lg:items-start lg:gap-16">
@@ -118,12 +109,12 @@ async function PublicHome() {
           </div>
 
           {/* Login card */}
-          <div className="rounded-3xl bg-white p-6 shadow-lg shadow-primary/10 lg:sticky lg:top-10">
+          <div id="login" className="rounded-3xl bg-white p-6 shadow-lg shadow-primary/10 lg:sticky lg:top-10">
             <div className="mb-5 space-y-1 text-center">
               <h2 className="text-xl font-bold text-foreground">{t.loginTitle}</h2>
               <p className="text-sm leading-6 text-muted-foreground">{t.loginSubtitle}</p>
             </div>
-            <LoginForm />
+            <LoginForm lang={lang} />
           </div>
         </section>
 
