@@ -5,13 +5,38 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import type { Lang } from "@/lib/i18n/translations";
 
-export function LoginForm() {
+const copy = {
+  en: {
+    google: "Continue with Google",
+    or: "or",
+    emailPlaceholder: "your@email.com",
+    sendLink: "Send Magic Link ✨",
+    sending: "Sending...",
+    checkEmail: "Check your email!",
+    sentIntro: "We sent a magic link to",
+    noPassword: "No password needed — we'll email you a sign-in link.",
+  },
+  ko: {
+    google: "Google로 계속하기",
+    or: "또는",
+    emailPlaceholder: "이메일 주소",
+    sendLink: "매직 링크 보내기 ✨",
+    sending: "전송 중...",
+    checkEmail: "이메일을 확인해주세요!",
+    sentIntro: "매직 링크를 보냈어요 →",
+    noPassword: "비밀번호 없이 이메일 링크로 바로 로그인돼요.",
+  },
+} as const;
+
+export function LoginForm({ lang = "en" }: { lang?: Lang }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const supabase = createClient();
+  const c = copy[lang];
 
   async function handleEmailLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -44,9 +69,9 @@ export function LoginForm() {
       <Card className="rounded-3xl shadow-md shadow-primary/10">
         <CardContent className="pt-8 pb-8 text-center">
           <div className="text-4xl mb-4">📬</div>
-          <p className="font-semibold text-foreground mb-1">Check your email!</p>
+          <p className="font-semibold text-foreground mb-1">{c.checkEmail}</p>
           <p className="text-sm text-muted-foreground">
-            We sent a magic link to <strong>{email}</strong>
+            {c.sentIntro} <strong>{email}</strong>
           </p>
         </CardContent>
       </Card>
@@ -68,19 +93,19 @@ export function LoginForm() {
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
           </svg>
-          Continue with Google
+          {c.google}
         </Button>
 
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground">or</span>
+          <span className="text-xs text-muted-foreground">{c.or}</span>
           <div className="flex-1 h-px bg-border" />
         </div>
 
         <form onSubmit={handleEmailLogin} className="flex flex-col gap-3">
           <Input
             type="email"
-            placeholder="your@email.com"
+            placeholder={c.emailPlaceholder}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -92,12 +117,12 @@ export function LoginForm() {
             disabled={loading || !email}
             className="w-full rounded-2xl py-5 bg-primary text-white font-semibold hover:bg-primary/90"
           >
-            {loading ? "Sending..." : "Send Magic Link ✨"}
+            {loading ? c.sending : c.sendLink}
           </Button>
         </form>
 
         <p className="text-center text-xs text-muted-foreground">
-          No password needed — we&apos;ll email you a sign-in link.
+          {c.noPassword}
         </p>
       </CardContent>
     </Card>
