@@ -69,3 +69,14 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Any copy or UI text change MUST include both `en` and `ko` versions.
 - Before confirming any text edit, verify that `lib/i18n/translations.ts` (or any local `copy` object in the file) has matching entries in both languages.
 - If one language is missing, add it before closing the task — do not leave half-translated copy.
+
+## Harness: Little Spoonfuls Dev
+
+**Goal:** Automate the build → i18n-check → code-review pipeline for feature work.
+
+**Trigger:** For any feature, bug fix, copy change, translation update, or code review — use the `dev` skill. Simple one-liner questions can be answered directly.
+
+**Change history:**
+| Date | Change | Target | Reason |
+|------|--------|--------|--------|
+| 2026-05-29 | Initial setup | All | Automate bilingual enforcement and code quality gate |
