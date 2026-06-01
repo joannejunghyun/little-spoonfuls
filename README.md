@@ -21,6 +21,7 @@ Generates a full day's meal plan (breakfast, lunch, snack, dinner) tailored to y
 - Meal history saved automatically
 - Request-specific RAG grounding for concerns like constipation, iron support, sleep, immunity, BLW safety, and Korean stage-appropriate meal patterns
 - Allergy-aware safety guardrails that block requests for ingredients already marked as unsafe for the baby
+- **Telegram bot** — message [@LittleSpoonfulsBot](https://t.me/LittleSpoonfulsBot) to get today's meal plan instantly; replies in the same language you write in (English or Korean); link your account for allergy-aware, profile-matched menus
 
 ---
 
@@ -146,6 +147,7 @@ Made with ❤️ by [Joanne](https://www.linkedin.com/in/junghyunhao/) — for D
 - 추천 이력 자동 저장
 - 변비, 철분 보충, 수면, 면역, BLW 안전, 한식 단계별 질감처럼 요청별로 관련 자료를 찾아 넣는 RAG 기반 생성
 - 아기 프로필의 알레르기와 충돌하는 식재료 요청은 LLM 호출 전에 차단
+- **텔레그램 봇** — [@LittleSpoonfulsBot](https://t.me/LittleSpoonfulsBot)에 메시지를 보내면 오늘의 메뉴를 바로 받을 수 있어요. 한국어로 물어보면 한국어로, 영어로 물어보면 영어로 답장. 계정을 연결하면 아기 프로필(알레르기, 나이, 식단)에 맞춘 맞춤 메뉴 제공
 
 ---
 
