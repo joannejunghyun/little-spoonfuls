@@ -1,5 +1,12 @@
 {
   "enabledPlugins": {
     "harness@harness-marketplace": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit*)",
+      "Bash(vercel ls *)",
+      "Bash(vercel --version)"
+    ]
   }
 }
