@@ -3,7 +3,7 @@
 // When a chat is linked to a Supabase user, the bot uses that user's baby profile.
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { getWeaningStage, buildStageContext } from "@/lib/weaning-context";
 import { buildBlwContext } from "@/lib/blw-context";
 import {
@@ -29,6 +29,13 @@ interface BabyProfile {
   birth_date: string;
   diet_type: string;
   allergies: string[];
+}
+
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
 }
 
 const DEFAULT_AGE_DAYS = 240;        // ~8 months
@@ -87,7 +94,7 @@ async function handleLinkCommand(chatId: number, text: string, lang: Lang): Prom
     return;
   }
 
-  const supabase = await createServiceClient();
+  const supabase = getServiceClient();
   const nowIso = new Date().toISOString();
 
   const { data: link, error: lookupError } = await supabase
@@ -149,7 +156,7 @@ async function handleMessage(chatId: number, lang: Lang): Promise<void> {
 
 async function getBabyForChat(chatId: number): Promise<BabyProfile | null> {
   try {
-    const supabase = await createServiceClient();
+    const supabase = getServiceClient();
     const { data: link } = await supabase
       .from("telegram_links")
       .select("user_id")
@@ -187,16 +194,21 @@ async function generateMenu(baby: BabyProfile | null, lang: Lang): Promise<MealP
   const babyName = baby?.name ?? "the baby";
   const monthsApprox = Math.floor(ageDays / 30);
 
+  const allergyRule = allergies.length > 0
+    ? `- STRICT ALLERGY BAN: NEVER use ${allergies.join(", ")} or any derivative (e.g. if egg is banned, also ban mayonnaise, custard, omelette). Violating this rule harms the baby.`
+    : "";
+
   const systemPrompt = `You are a certified baby nutritionist specializing in infant weaning. You respond ONLY with valid JSON — no markdown fences, no preamble, no explanation. Your response must start with { and end with }.
 IMPORTANT RULES:
-- Do not use breast milk or formula as recipe ingredients or mixing liquids.`;
+- Do not use breast milk or formula as recipe ingredients or mixing liquids.
+${allergyRule}`.trim();
 
   const languageInstruction = lang === "ko"
     ? "Write everything in Korean (한국어로 작성해주세요)."
     : "Write everything in English.";
 
   const allergyLine = allergies.length > 0
-    ? `STRICT ALLERGIES TO AVOID: ${allergies.join(", ")}. Never include these or close synonyms.`
+    ? `Allergies (already enforced above): ${allergies.join(", ")}.`
     : "No known allergies.";
 
   const dynamicPrompt = `Baby details:
