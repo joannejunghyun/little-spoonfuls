@@ -28,6 +28,30 @@ export async function sendMessage(chatId: number | string, text: string): Promis
   }
 }
 
+export function linkSuccessMessage(lang: Lang): string {
+  return lang === "ko"
+    ? "✅ 연결되었어요! 이제 메시지를 보내면 아기 프로필에 맞춘 메뉴를 받아볼 수 있어요."
+    : "✅ All linked! Send any message and I'll cook up a menu tailored to your baby's profile.";
+}
+
+export function linkInvalidMessage(lang: Lang): string {
+  return lang === "ko"
+    ? "코드를 확인할 수 없어요. 만료되었거나 잘못된 코드일 수 있어요. 앱에서 새 코드를 발급해 주세요."
+    : "I couldn't verify that code — it may have expired or been mistyped. Please generate a new one in the app.";
+}
+
+export function linkUsageMessage(lang: Lang): string {
+  return lang === "ko"
+    ? "연결하려면 `/link 코드` 형식으로 보내주세요. (예: `/link ABC12345`)"
+    : "To link your account, send `/link CODE` (e.g. `/link ABC12345`).";
+}
+
+export function profileMissingNotice(lang: Lang): string {
+  return lang === "ko"
+    ? "ℹ️ 아기 프로필을 설정하면 더 맞춤화된 메뉴를 드려요."
+    : "ℹ️ Set up a baby profile in the app for menus tailored to your little one.";
+}
+
 export function formatMenuForTelegram(menu: MealPlan, lang: Lang = "en"): string {
   const { stage, cuisine, overall_advice, meals } = menu;
   const t = translations[lang];

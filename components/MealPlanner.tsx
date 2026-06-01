@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { MealCard } from "@/components/MealCard";
 import { VotePopup } from "@/components/VotePopup";
+import { TelegramConnectBanner } from "@/components/TelegramConnectBanner";
 import { useLanguage, useLang } from "@/components/LanguageProvider";
 import { getWeaningStage } from "@/lib/weaning-context";
 import type { MealPlan, Meal } from "@/app/api/generate/route";
@@ -78,6 +79,7 @@ export function MealPlanner({ babies, initialHasVoted }: { babies: Baby[]; initi
   const [hasVoted, setHasVoted] = useState(initialHasVoted);
   const [showVotePopup, setShowVotePopup] = useState(false);
   const [voteState, setVoteState] = useState<VoteState | null>(null);
+  const [hasGeneratedOnce, setHasGeneratedOnce] = useState(false);
   const prevRemaining = useRef<number | null>(null);
   const accumulatedRef = useRef("");
 
@@ -184,6 +186,7 @@ export function MealPlanner({ babies, initialHasVoted }: { babies: Baby[]; initi
           setStreamedMeals(parsed.meals ?? {});
           setStreamedAdvice(parsed.overall_advice ?? null);
           setStreamedStage(parsed.stage ?? "");
+          setHasGeneratedOnce(true);
         } catch {
           setError(t.somethingWrong);
         }
@@ -419,6 +422,8 @@ export function MealPlanner({ babies, initialHasVoted }: { babies: Baby[]; initi
           })}
         </div>
       )}
+
+      <TelegramConnectBanner visible={hasGeneratedOnce && !loading && !!mealPlan} />
     </div>
     </>
   );

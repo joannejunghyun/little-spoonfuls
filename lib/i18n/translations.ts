@@ -161,6 +161,25 @@ export const translations = {
     voteEarlyBird: "You'll get an early-bird discount when we launch.",
     voteLater: "Not now",
 
+    // Telegram link
+    telegram: {
+      bannerTitle: "Get today's menu on Telegram?",
+      bannerBody: "Tap connect and we'll send a fresh menu to your chat each day.",
+      connectBtn: "Connect Telegram",
+      laterBtn: "Maybe later",
+      modalTitle: "Link your Telegram",
+      modalStep1: "Open your Telegram app.",
+      modalStep2: (botUsername: string) => `Send the code below to ${botUsername}.`,
+      modalStep2Fallback: "Send the code below to our bot.",
+      modalCodeLabel: "Your code",
+      modalExpires: (mins: number) => `Expires in ${mins} minute${mins === 1 ? "" : "s"}`,
+      modalCopy: "Copy code",
+      modalCopied: "Copied!",
+      modalClose: "Close",
+      modalAlreadyLinked: "Your account is already linked to Telegram.",
+      modalError: "Couldn't generate a code. Please try again.",
+    },
+
     // Errors
     notReadyYet: (name: string) => `${name} isn't quite ready for solids yet — breast milk or formula is still best! 💛`,
     somethingWrong: "Something went wrong. Please try again.",
@@ -338,6 +357,25 @@ export const translations = {
     voteThanks: "투표해 주셔서 감사해요 🎉",
     voteEarlyBird: "출시 시 얼리버드 할인 혜택을 드릴게요.",
     voteLater: "나중에요",
+
+    // Telegram link
+    telegram: {
+      bannerTitle: "텔레그램으로 매일 메뉴 받아볼래요?",
+      bannerBody: "연결하면 매일 새로운 메뉴를 채팅으로 보내드려요.",
+      connectBtn: "연결하기",
+      laterBtn: "나중에요",
+      modalTitle: "텔레그램 연결하기",
+      modalStep1: "텔레그램 앱을 열어주세요.",
+      modalStep2: (botUsername: string) => `${botUsername} 봇에게 아래 코드를 보내주세요.`,
+      modalStep2Fallback: "봇에게 아래 코드를 보내주세요.",
+      modalCodeLabel: "내 코드",
+      modalExpires: (mins: number) => `${mins}분 후 만료돼요`,
+      modalCopy: "코드 복사",
+      modalCopied: "복사했어요!",
+      modalClose: "닫기",
+      modalAlreadyLinked: "이미 텔레그램과 연결되어 있어요.",
+      modalError: "코드를 만들지 못했어요. 다시 시도해주세요.",
+    },
 
     // Errors
     notReadyYet: (name: string) => `${name}는 아직 이유식을 시작하기엔 조금 일러요 💛 지금은 모유나 분유가 최고예요!`,
