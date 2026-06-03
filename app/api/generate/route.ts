@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { trace } from "@opentelemetry/api";
+import { trace, SpanStatusCode } from "@opentelemetry/api";
 import { createClient } from "@/lib/supabase/server";
 import { getWeaningStage, buildStageContext } from "@/lib/weaning-context";
 import { buildBlwContext, type BlwType } from "@/lib/blw-context";
@@ -147,13 +147,21 @@ interface ParsedPlan {
   meals: MealSet;
 }
 
+const tracer = trace.getTracer("little-spoonfuls");
+
 export async function POST(req: NextRequest) {
-  try {
-    return await handleGenerate(req);
-  } catch (err) {
-    console.error("[generate] unhandled error:", err);
-    return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
-  }
+  return tracer.startActiveSpan("generate_meal_plan", async (rootSpan) => {
+    try {
+      return await handleGenerate(req);
+    } catch (err) {
+      rootSpan.recordException(err as Error);
+      rootSpan.setStatus({ code: SpanStatusCode.ERROR });
+      console.error("[generate] unhandled error:", err);
+      return NextResponse.json({ error: "Something went wrong. Please try again." }, { status: 500 });
+    } finally {
+      rootSpan.end();
+    }
+  });
 }
 
 async function handleGenerate(req: NextRequest) {
